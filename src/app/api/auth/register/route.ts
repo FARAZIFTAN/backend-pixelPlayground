@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     // @ts-ignore - Mongoose types can be complex
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: email.toLowerCase(), isDeleted: false });
     if (existingUser) {
       return NextResponse.json(
         {
@@ -70,18 +70,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new user (password will be hashed automatically by the pre-save hook)
+
+    // Use correct type for Mongoose instance to access methods
     const user = new User({
       name,
       email: email.toLowerCase(),
       password,
-    });
+      isEmailVerified: false,
+    }) as any;
+
+    // Generate email verification token
+    const verificationToken = user.generateEmailVerificationToken();
     await user.save();
+
+    // TODO: Send verification email
+    // In production, send email with verification link:
+    // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    // await sendEmail(user.email, 'Verify Your Email', verificationUrl);
+
+    console.log('Email Verification Token:', verificationToken);
+    console.log('User should verify email at: /api/auth/verify-email?token=' + verificationToken);
 
     // Return success response (without password)
     return NextResponse.json(
       {
         success: true,
-        message: 'User registered successfully! Please login.',
+        message: 'User registered successfully! Please check your email to verify your account.',
         data: {
           user: {
             id: user._id,

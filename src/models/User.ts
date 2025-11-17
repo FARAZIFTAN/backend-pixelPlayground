@@ -5,10 +5,28 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  phone?: string;
+  profilePicture?: string;
   role: 'user' | 'admin';
+  isEmailVerified: boolean;
+  isActive: boolean;
+  isDeleted: boolean;
+  lastLogin?: Date;
+  loginHistory: Array<{
+    ipAddress: string;
+    userAgent: string;
+    loginAt: Date;
+  }>;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+  generateEmailVerificationToken(): string;
+  generateResetPasswordToken(): string;
 }
 
 const userSchema = new Schema<IUser>(
@@ -36,16 +54,72 @@ const userSchema = new Schema<IUser>(
       minlength: [8, 'Password must be at least 8 characters'],
       select: false, // Don't return password by default
     },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Phone number cannot be more than 20 characters'],
+    },
+    profilePicture: {
+      type: String,
+    },
     role: {
       type: String,
       enum: ['user', 'admin'],
       default: 'user',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      select: false,
+    },
+    lastLogin: {
+      type: Date,
+    },
+    loginHistory: {
+      type: [{
+        ipAddress: String,
+        userAgent: String,
+        loginAt: Date,
+      }],
+      default: [],
+      select: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      select: false,
+    },
+    resetPasswordToken: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false,
+    },
+    deletedAt: {
+      type: Date,
+      select: false,
     },
   },
   {
     timestamps: true,
   }
 );
+
+// Index for soft delete queries
+userSchema.index({ isDeleted: 1, isActive: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
@@ -70,6 +144,28 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
   } catch (error) {
     return false;
   }
+};
+
+// Method to generate email verification token
+userSchema.methods.generateEmailVerificationToken = function (): string {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  
+  return token;
+};
+
+// Method to generate reset password token
+userSchema.methods.generateResetPasswordToken = function (): string {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+  this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  
+  return token;
 };
 
 const User = models.User || model<IUser>('User', userSchema);

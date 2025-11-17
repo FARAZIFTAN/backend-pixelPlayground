@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email (include password field)
+    // Find user by email (include password field), only if not deleted
     // @ts-ignore - Mongoose types can be complex
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false }).select('+password');
     
     if (!user) {
       return NextResponse.json(
@@ -33,6 +33,17 @@ export async function POST(request: NextRequest) {
           message: 'Invalid email or password',
         },
         { status: 401 }
+      );
+    }
+
+    // Check if account is active
+    if (!user.isActive) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Your account has been deactivated. Please contact support.',
+        },
+        { status: 403 }
       );
     }
 
@@ -48,6 +59,37 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Optional: Check if email is verified
+    // Uncomment below to enforce email verification before login
+    // if (!user.isEmailVerified) {
+    //   return NextResponse.json(
+    //     {
+    //       success: false,
+    //       message: 'Please verify your email before logging in',
+    //     },
+    //     { status: 403 }
+    //   );
+    // }
+
+    // Track login history
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    
+    user.lastLogin = new Date();
+    user.loginHistory = user.loginHistory || [];
+    user.loginHistory.unshift({
+      ipAddress,
+      userAgent,
+      loginAt: new Date(),
+    });
+    
+    // Keep only last 10 login history entries
+    if (user.loginHistory.length > 10) {
+      user.loginHistory = user.loginHistory.slice(0, 10);
+    }
+    
+    await user.save();
 
     // Generate JWT token
     const token = generateToken({
@@ -69,6 +111,7 @@ export async function POST(request: NextRequest) {
             name: user.name,
             email: user.email,
             role: user.role || 'user',
+            isEmailVerified: user.isEmailVerified,
             createdAt: user.createdAt,
           },
         },

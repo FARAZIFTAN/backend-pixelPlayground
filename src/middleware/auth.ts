@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -12,6 +14,7 @@ export interface AuthenticatedRequest extends NextRequest {
 
 /**
  * Middleware to verify JWT token from Authorization header
+ * Also checks if user is deleted or inactive
  * Usage: const user = await verifyAuth(request);
  */
 export async function verifyAuth(
@@ -28,6 +31,14 @@ export async function verifyAuth(
     const decoded = verifyToken(token);
 
     if (!decoded) {
+      return null;
+    }
+
+    // Check if user still exists and is active
+    await connectDB();
+    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive');
+    
+    if (!user || user.isDeleted || !user.isActive) {
       return null;
     }
 
