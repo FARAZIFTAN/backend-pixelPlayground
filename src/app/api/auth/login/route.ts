@@ -5,14 +5,19 @@ import { generateToken } from '@/lib/jwt';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[LOGIN] Starting login process...');
     await connectDB();
+    console.log('[LOGIN] Database connected');
 
     const body = await request.json();
     const email = body.email as string;
     const password = body.password as string;
 
+    console.log('[LOGIN] Attempting login for email:', email);
+
     // Validation
     if (!email || !password) {
+      console.log('[LOGIN] Missing email or password');
       return NextResponse.json(
         {
           success: false,
@@ -24,9 +29,12 @@ export async function POST(request: NextRequest) {
 
     // Find user by email (include password field), only if not deleted
     // @ts-ignore - Mongoose types can be complex
-    const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false }).select('+password +loginHistory');
+    
+    console.log('[LOGIN] User found:', user ? 'Yes' : 'No');
     
     if (!user) {
+      console.log('[LOGIN] User not found or deleted');
       return NextResponse.json(
         {
           success: false,
@@ -36,8 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('[LOGIN] User role:', user.role);
+    console.log('[LOGIN] User isActive:', user.isActive);
+
     // Check if account is active
     if (!user.isActive) {
+      console.log('[LOGIN] Account is not active');
       return NextResponse.json(
         {
           success: false,
@@ -48,9 +60,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Compare password
+    console.log('[LOGIN] Comparing password...');
     const isPasswordValid = await user.comparePassword(password);
+    console.log('[LOGIN] Password valid:', isPasswordValid);
     
     if (!isPasswordValid) {
+      console.log('[LOGIN] Invalid password');
       return NextResponse.json(
         {
           success: false,
@@ -73,11 +88,17 @@ export async function POST(request: NextRequest) {
     // }
 
     // Track login history
+    console.log('[LOGIN] Updating login history...');
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
     
     user.lastLogin = new Date();
-    user.loginHistory = user.loginHistory || [];
+    
+    // Initialize loginHistory if it doesn't exist
+    if (!user.loginHistory) {
+      user.loginHistory = [];
+    }
+    
     user.loginHistory.unshift({
       ipAddress,
       userAgent,
@@ -89,17 +110,27 @@ export async function POST(request: NextRequest) {
       user.loginHistory = user.loginHistory.slice(0, 10);
     }
     
-    await user.save();
+    console.log('[LOGIN] Saving user...');
+    try {
+      await user.save();
+      console.log('[LOGIN] User saved successfully');
+    } catch (saveError) {
+      console.error('[LOGIN] Error saving user:', saveError);
+      // Continue anyway - login history is not critical
+    }
 
     // Generate JWT token
+    console.log('[LOGIN] Generating token...');
     const token = generateToken({
       userId: user._id.toString(),
       email: user.email,
       name: user.name,
       role: user.role || 'user',
     });
+    console.log('[LOGIN] Token generated successfully');
 
     // Return success response with token
+    console.log('[LOGIN] Login successful for user:', email);
     return NextResponse.json(
       {
         success: true,
@@ -118,8 +149,13 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    console.error('Login error:', error);
+  } catch (error: unknown) {
+    console.error('[LOGIN] Error occurred:', error);
+    
+    if (error instanceof Error) {
+      console.error('[LOGIN] Error message:', error.message);
+      console.error('[LOGIN] Error stack:', error.stack);
+    }
     
     return NextResponse.json(
       {
