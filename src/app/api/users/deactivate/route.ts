@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const user = await (User as any).findById(authUser.userId);
+    const user = await (User as any).findById(authUser.userId).select('+password');
     
     if (!user || user.isDeleted) {
       return NextResponse.json(

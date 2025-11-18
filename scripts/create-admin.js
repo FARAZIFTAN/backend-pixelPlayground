@@ -70,9 +70,14 @@ async function createAdmin() {
     console.log('✅ Connected to MongoDB\n');
 
     // Get admin details
-    const name = await question('Admin Name: ');
-    const email = await question('Admin Email: ');
-    const password = await question('Admin Password (min 8 characters): ');
+    const name = "Admin User";
+    const email = "admin5@gmail.com";
+    const password = "admin123";
+
+    console.log('Using fixed credentials:');
+    console.log('Name:', name);
+    console.log('Email:', email);
+    console.log('Password:', password);
 
     // Validation
     if (!name || name.length < 2) {
@@ -93,18 +98,15 @@ async function createAdmin() {
       throw new Error('User with this email already exists');
     }
 
-    // Hash password
-    console.log('\n🔒 Hashing password...');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create admin user
+    // Create admin user (password will be hashed automatically by the pre-save hook)
     console.log('👤 Creating admin user...');
     const admin = await User.create({
       name,
       email: email.toLowerCase(),
-      password: hashedPassword,
+      password,
       role: 'admin',
+      isEmailVerified: false, // Same as regular users
+      isActive: true,
     });
 
     console.log('\n✅ Admin user created successfully!\n');

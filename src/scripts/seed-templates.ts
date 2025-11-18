@@ -28,7 +28,7 @@ const templates: Partial<ITemplate>[] = [
       { x: 28, y: 490, width: 485, height: 323 },
       { x: 27, y: 883, width: 486, height: 317 },
     ],
-    isActive: true,
+    isActive: true, // ✅ Changed from false to true
   },
   {
     name: "Morris",
@@ -42,7 +42,7 @@ const templates: Partial<ITemplate>[] = [
       { x: 27, y: 560, width: 498, height: 317 },
       { x: 27, y: 947, width: 486, height: 323 },
     ],
-    isActive: true,
+    isActive: true, // ✅ Already true
   },
 ];
 
