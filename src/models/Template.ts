@@ -5,11 +5,15 @@ export interface ILayoutPosition {
   y: number;
   width: number;
   height: number;
+  borderRadius?: number; // opsional, px
+  rotation?: number; // opsional, derajat
 }
 
 export interface ITemplate extends Document {
   name: string;
   category: string;
+  description?: string;
+  tags?: string[];
   thumbnail: string;
   frameUrl: string;
   isPremium: boolean;
@@ -39,6 +43,16 @@ const layoutPositionSchema = new Schema<ILayoutPosition>(
       type: Number,
       required: true,
     },
+    borderRadius: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
+    rotation: {
+      type: Number,
+      required: false,
+      default: 0,
+    },
   },
   { _id: false }
 );
@@ -67,6 +81,17 @@ const templateSchema = new Schema<ITemplate>(
         'General',
       ],
       default: 'General',
+    },
+    description: {
+      type: String,
+      required: false,
+      trim: true,
+      maxlength: [500, 'Description cannot be more than 500 characters'],
+    },
+    tags: {
+      type: [String],
+      required: false,
+      default: [],
     },
     thumbnail: {
       type: String,
