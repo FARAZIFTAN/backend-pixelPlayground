@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Template from '@/models/Template';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
-import { verifyAdmin } from '@/middleware/admin';
-import formidable from 'formidable';
-import fs from 'fs';
-import path from 'path';
 
 // GET /api/templates - Get all templates (public)
 export async function GET(request: NextRequest) {
@@ -100,80 +96,20 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Parse multipart/form-data using formidable
-    const form = formidable({
-      multiples: false,
-      maxFileSize: 10 * 1024 * 1024, // 10MB
-      uploadDir: path.join(process.cwd(), 'public', 'uploads', 'templates'),
-      keepExtensions: true,
-    });
-
-    // formidable expects a Node.js IncomingMessage, not NextRequest
-    const req = (request as any).req || request;
-
-    // Parse form
-    const data = await new Promise<{ fields: any; files: any }>((resolve, reject) => {
-      form.parse(req, (err, fields, files) => {
-        if (err) reject(err);
-        else resolve({ fields, files });
-      });
-    });
-
+    const body = await request.json();
     const {
       name,
       category,
-      description,
-      tags,
+      thumbnail,
+      frameUrl,
       isPremium,
       frameCount,
       layoutPositions,
       isActive,
-    } = data.fields;
-
-    // File upload
-    const frameFile = data.files.frame;
-    if (!frameFile) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Frame PNG file is required',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Save file and get URL
-    const fileName = path.basename(frameFile.filepath || frameFile.path);
-    const frameUrl = `/uploads/templates/${fileName}`;
-    // For thumbnail, you can use the same file or generate a smaller version (not implemented here)
-    const thumbnail = frameUrl;
-
-    // Parse layoutPositions (should be JSON string)
-    let layoutPositionsParsed = [];
-    try {
-      layoutPositionsParsed = JSON.parse(layoutPositions);
-    } catch (e) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid layoutPositions format',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Parse tags (optional, comma separated)
-    let tagsArr = [];
-    if (tags) {
-      if (typeof tags === 'string') {
-        tagsArr = tags.split(',').map((t: string) => t.trim());
-      } else if (Array.isArray(tags)) {
-        tagsArr = tags;
-      }
-    }
+    } = body;
 
     // Validation
-    if (!name || !category || !frameUrl || !frameCount || !layoutPositionsParsed) {
+    if (!name || !category || !thumbnail || !frameUrl || !frameCount || !layoutPositions) {
       return NextResponse.json(
         {
           success: false,
@@ -183,7 +119,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (layoutPositionsParsed.length !== Number(frameCount)) {
+    if (layoutPositions.length !== frameCount) {
       return NextResponse.json(
         {
           success: false,
@@ -197,14 +133,12 @@ export async function POST(request: NextRequest) {
     const template = await (Template as any).create({
       name,
       category,
-      description: description || '',
-      tags: tagsArr,
       thumbnail,
       frameUrl,
-      isPremium: isPremium === 'true' || isPremium === true,
-      frameCount: Number(frameCount),
-      layoutPositions: layoutPositionsParsed,
-      isActive: isActive !== undefined ? isActive === 'true' || isActive === true : true,
+      isPremium: isPremium || false,
+      frameCount,
+      layoutPositions,
+      isActive: isActive !== undefined ? isActive : true,
       createdBy: authUser.userId,
     });
 
