@@ -142,6 +142,7 @@ export async function POST(request: NextRequest) {
             name: user.name,
             email: user.email,
             role: user.role || 'user',
+            profilePicture: user.profilePicture || null,
             isEmailVerified: user.isEmailVerified,
             createdAt: user.createdAt,
           },
