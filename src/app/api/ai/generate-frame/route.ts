@@ -20,13 +20,13 @@ export async function POST(request: NextRequest) {
     // Create SVG for the frame
     const svgImage = createFrameSVG(body);
     
-    // Convert SVG to PNG (as base64)
+    // Convert SVG to base64 (keep as SVG for transparency support)
     const base64Image = await svgToBase64(svgImage);
 
     return NextResponse.json({
       success: true,
       image: base64Image,
-      contentType: 'image/png',
+      contentType: 'image/svg+xml',
     });
 
   } catch (error) {
@@ -66,6 +66,7 @@ function createFrameSVG(config: FrameRequest): string {
   `;
 
   let photoElements = '';
+  let photoMasks = ''; // For creating transparent cutouts
   const effectiveBorderWidth = Math.max(borderWidth, 3); // Minimum 3px untuk visibility
   
   if (config.layout === 'vertical') {
@@ -75,18 +76,30 @@ function createFrameSVG(config: FrameRequest): string {
 
     for (let i = 0; i < config.frameCount; i++) {
       const y = padding + i * (photoHeight + padding);
-      photoElements += `
-        <!-- Photo slot ${i + 1} -->
+      
+      // Create mask cutout for photo area
+      photoMasks += `
         <rect 
           x="${padding}" 
           y="${y}" 
           width="${photoWidth}" 
           height="${photoHeight}" 
-          fill="white" 
+          rx="${borderRadius}"
+        />
+      `;
+      
+      // Border only (no fill, will be drawn on top)
+      photoElements += `
+        <!-- Photo border ${i + 1} -->
+        <rect 
+          x="${padding}" 
+          y="${y}" 
+          width="${photoWidth}" 
+          height="${photoHeight}" 
+          fill="none" 
           stroke="${borderColor}" 
           stroke-width="${effectiveBorderWidth}" 
           rx="${borderRadius}"
-          filter="url(#shadow)"
         />
       `;
     }
@@ -97,18 +110,30 @@ function createFrameSVG(config: FrameRequest): string {
 
     for (let i = 0; i < config.frameCount; i++) {
       const x = padding + i * (photoWidth + padding);
-      photoElements += `
-        <!-- Photo slot ${i + 1} -->
+      
+      // Create mask cutout for photo area
+      photoMasks += `
         <rect 
           x="${x}" 
           y="${padding}" 
           width="${photoWidth}" 
           height="${photoHeight}" 
-          fill="white" 
+          rx="${borderRadius}"
+        />
+      `;
+      
+      // Border only (no fill)
+      photoElements += `
+        <!-- Photo border ${i + 1} -->
+        <rect 
+          x="${x}" 
+          y="${padding}" 
+          width="${photoWidth}" 
+          height="${photoHeight}" 
+          fill="none" 
           stroke="${borderColor}" 
           stroke-width="${effectiveBorderWidth}" 
           rx="${borderRadius}"
-          filter="url(#shadow)"
         />
       `;
     }
@@ -127,18 +152,29 @@ function createFrameSVG(config: FrameRequest): string {
         const x = padding + col * (photoWidth + padding);
         const y = padding + row * (photoHeight + padding);
 
-        photoElements += `
-          <!-- Photo slot ${photoNum} -->
+        // Create mask cutout for photo area
+        photoMasks += `
           <rect 
             x="${x}" 
             y="${y}" 
             width="${photoWidth}" 
             height="${photoHeight}" 
-            fill="white" 
+            rx="${borderRadius}"
+          />
+        `;
+        
+        // Border only (no fill)
+        photoElements += `
+          <!-- Photo border ${photoNum} -->
+          <rect 
+            x="${x}" 
+            y="${y}" 
+            width="${photoWidth}" 
+            height="${photoHeight}" 
+            fill="none" 
             stroke="${borderColor}" 
             stroke-width="${effectiveBorderWidth}" 
             rx="${borderRadius}"
-            filter="url(#shadow)"
           />
         `;
       }
@@ -155,10 +191,15 @@ function createFrameSVG(config: FrameRequest): string {
         <filter id="shadow">
           <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.15" />
         </filter>
+        <!-- Mask for photo cutouts - black areas will be cut out -->
+        <mask id="frameMask">
+          <rect width="${width}" height="${height}" fill="white"/>
+          ${photoMasks.replace(/<rect /g, '<rect fill="black" ')}
+        </mask>
       </defs>
-      <!-- Background with gradient -->
-      <rect width="${width}" height="${height}" fill="url(#${gradientId})"/>
-      <!-- Photo elements with visible borders -->
+      <!-- Background with gradient and mask (transparent where photos go) -->
+      <rect width="${width}" height="${height}" fill="url(#${gradientId})" mask="url(#frameMask)"/>
+      <!-- Photo borders on top -->
       ${photoElements}
     </svg>
   `;
