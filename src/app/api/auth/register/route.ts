@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { notificationService } from '@/lib/notificationService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,6 +83,23 @@ export async function POST(request: NextRequest) {
     // Generate email verification token
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
+
+    // Send notification to admins about new user registration
+    try {
+      await notificationService.notifyAllAdmins(
+        'New User Registration',
+        `${user.name} (${user.email}) has registered`,
+        'user',
+        {
+          userId: user._id,
+          userName: user.name,
+          userEmail: user.email,
+        }
+      );
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // Don't fail registration if notification fails
+    }
 
     // TODO: Send verification email
     // In production, send email with verification link:

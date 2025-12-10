@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { generateToken } from '@/lib/jwt';
+import { notificationService } from '@/lib/notificationService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -128,6 +129,25 @@ export async function POST(request: NextRequest) {
       role: user.role || 'user',
     });
     console.log('[LOGIN] Token generated successfully');
+
+    // Send notification to admins about new login
+    try {
+      if (user.role === 'user') {
+        await notificationService.notifyAllAdmins(
+          'New User Login',
+          `${user.name} (${user.email}) has logged in`,
+          'user',
+          {
+            userId: user._id,
+            userName: user.name,
+            userEmail: user.email,
+          }
+        );
+      }
+    } catch (notificationError) {
+      console.error('[LOGIN] Error sending notification:', notificationError);
+      // Don't fail login if notification fails
+    }
 
     // Return success response with token
     console.log('[LOGIN] Login successful for user:', email);
