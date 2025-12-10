@@ -5,6 +5,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  googleId?: string;
   phone?: string;
   profilePicture?: string;
   role: 'user' | 'admin';
@@ -50,9 +51,17 @@ const userSchema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: [true, 'Please provide a password'],
+      required: function(this: IUser) {
+        // Password not required for Google OAuth users
+        return !this.googleId;
+      },
       minlength: [8, 'Password must be at least 8 characters'],
       select: false, // Don't return password by default
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow null values
     },
     phone: {
       type: String,

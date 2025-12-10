@@ -32,10 +32,16 @@ async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 10000, // 10 seconds timeout
+      socketTimeoutMS: 45000,
+      family: 4, // Use IPv4, skip trying IPv6
+      maxPoolSize: 10,
+      minPoolSize: 2,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
       console.log('✅ MongoDB Connected Successfully');
+      console.log('📍 Connected to:', MONGODB_URI!.split('@')[1].split('/')[0]);
       return mongoose;
     });
   }
@@ -45,6 +51,7 @@ async function connectDB() {
   } catch (e) {
     cached.promise = null;
     console.error('❌ MongoDB Connection Error:', e);
+    console.error('🔗 Attempted connection to:', MONGODB_URI!.split('@')[1].split('/')[0]);
     throw e;
   }
 

@@ -122,15 +122,26 @@ export async function POST(request: NextRequest) {
         location: metadata?.location,
         totalPhotos: 0,
         duration: 0,
+        ...metadata, // Include all metadata from request
       },
       startedAt: new Date(),
     });
+
+    console.log('✅ Session created:', session._id);
 
     return NextResponse.json(
       {
         success: true,
         message: 'Session created successfully',
-        data: session,
+        data: {
+          _id: session._id,
+          userId: session.userId,
+          sessionName: session.sessionName,
+          templateId: session.templateId,
+          status: session.status,
+          metadata: session.metadata,
+          startedAt: session.startedAt,
+        },
       },
       { status: 201 }
     );
