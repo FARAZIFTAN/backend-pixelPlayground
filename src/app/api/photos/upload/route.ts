@@ -3,6 +3,8 @@ import connectDB from '@/lib/mongodb';
 import CapturedPhoto from '@/models/CapturedPhoto';
 import PhotoSession from '@/models/PhotoSession';
 import { verifyToken } from '@/lib/jwt';
+import fs from 'fs/promises';
+import path from 'path';
 
 // POST /api/photos/upload - Upload captured photo
 export async function POST(request: NextRequest) {
@@ -52,12 +54,85 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Process photoUrl - if it's base64, save to filesystem
+    let finalPhotoUrl = photoUrl;
+    let finalThumbnailUrl = thumbnailUrl;
+
+    if (photoUrl.startsWith('data:image/')) {
+      try {
+        // Extract base64 data
+        const matches = photoUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (matches) {
+          const imageType = matches[1];
+          const base64Data = matches[2];
+          
+          // Create uploads directory if it doesn't exist
+          const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
+          try {
+            await fs.access(uploadsDir);
+          } catch {
+            await fs.mkdir(uploadsDir, { recursive: true });
+          }
+
+          // Generate unique filename
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(7);
+          const filename = `photo-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
+          const filepath = path.join(uploadsDir, filename);
+
+          // Save file
+          const buffer = Buffer.from(base64Data, 'base64');
+          await fs.writeFile(filepath, buffer);
+
+          // Update URL to filesystem path
+          finalPhotoUrl = `/uploads/photos/${filename}`;
+        }
+      } catch (error) {
+        console.error('Error saving base64 image:', error);
+        return NextResponse.json(
+          { success: false, message: 'Failed to save image' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Process thumbnailUrl if it's base64
+    if (thumbnailUrl && thumbnailUrl.startsWith('data:image/')) {
+      try {
+        const matches = thumbnailUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (matches) {
+          const imageType = matches[1];
+          const base64Data = matches[2];
+          
+          const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
+          try {
+            await fs.access(uploadsDir);
+          } catch {
+            await fs.mkdir(uploadsDir, { recursive: true });
+          }
+
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(7);
+          const filename = `thumb-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
+          const filepath = path.join(uploadsDir, filename);
+
+          const buffer = Buffer.from(base64Data, 'base64');
+          await fs.writeFile(filepath, buffer);
+
+          finalThumbnailUrl = `/uploads/photos/${filename}`;
+        }
+      } catch (error) {
+        console.error('Error saving thumbnail:', error);
+        // Continue without thumbnail
+      }
+    }
+
     // Create captured photo
     const photo = await CapturedPhoto.create({
       sessionId,
       userId: decoded.userId,
-      photoUrl,
-      thumbnailUrl: thumbnailUrl || undefined,
+      photoUrl: finalPhotoUrl,
+      thumbnailUrl: finalThumbnailUrl || undefined,
       order: order || 0,
       metadata: {
         width: metadata?.width,

@@ -34,11 +34,11 @@ const capturedPhotoSchema = new Schema<ICapturedPhoto>(
     photoUrl: {
       type: String,
       required: [true, 'Photo URL is required'],
-      maxlength: [500, 'Photo URL cannot exceed 500 characters'],
+      maxlength: [1000, 'Photo URL cannot exceed 1000 characters'],
     },
     thumbnailUrl: {
       type: String,
-      maxlength: [500, 'Thumbnail URL cannot exceed 500 characters'],
+      maxlength: [1000, 'Thumbnail URL cannot exceed 1000 characters'],
     },
     order: {
       type: Number,
