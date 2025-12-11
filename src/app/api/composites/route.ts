@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import PhotoSession from '@/models/PhotoSession';
+import Photo from '@/models/Photo';
+import Template from '@/models/Template';
 import { verifyToken } from '@/lib/jwt';
 
 // POST /api/composites - Create final composite
@@ -77,10 +79,40 @@ export async function POST(request: NextRequest) {
     session.completedAt = new Date();
     await session.save();
 
+    // AUTO-SAVE to Gallery as PRIVATE by default
+    try {
+      // Get template name for title
+      let templateName = 'Untitled';
+      if (composite.templateId) {
+        const template = await Template.findById(composite.templateId);
+        if (template) {
+          templateName = template.name;
+        }
+      }
+
+      // Create photo entry in gallery (PRIVATE by default)
+      const photo = await Photo.create({
+        userId: decoded.userId,
+        title: `${templateName} - ${new Date().toLocaleDateString('id-ID')}`,
+        description: `Created from ${templateName} template`,
+        imageUrl: compositeUrl,
+        thumbnailUrl: thumbnailUrl || compositeUrl,
+        isPublic: false, // PRIVATE by default
+        templateId: composite.templateId,
+        views: 0,
+        likes: 0,
+      });
+
+      console.log(`✅ Auto-saved to gallery: ${photo._id}`);
+    } catch (galleryError) {
+      console.error('⚠️ Failed to auto-save to gallery:', galleryError);
+      // Don't fail the composite creation if gallery save fails
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: 'Composite created successfully',
+        message: 'Composite created successfully and saved to your gallery',
         data: composite,
       },
       { status: 201 }

@@ -1,4 +1,4 @@
-import { Schema, model, models, Document } from 'mongoose';
+import { Schema, model, models, Document, Model } from 'mongoose';
 
 export interface IPhoto extends Document {
   userId: string;
@@ -66,6 +66,6 @@ photoSchema.index({ userId: 1, createdAt: -1 });
 photoSchema.index({ isPublic: 1, createdAt: -1 });
 photoSchema.index({ templateId: 1, createdAt: -1 });
 
-const Photo = models.Photo || model<IPhoto>('Photo', photoSchema);
+const Photo = (models.Photo || model<IPhoto>('Photo', photoSchema)) as Model<IPhoto>;
 
 export default Photo;

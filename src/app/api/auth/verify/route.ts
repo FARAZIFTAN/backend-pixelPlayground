@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
+import { corsOptionsResponse } from '@/lib/cors';
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Handle OPTIONS request for CORS
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 200 });
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  return corsOptionsResponse(origin);
 }
