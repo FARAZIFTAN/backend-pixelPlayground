@@ -18,6 +18,17 @@ export interface IUser extends Document {
     userAgent: string;
     loginAt: Date;
   }>;
+  settings?: {
+    notifications?: {
+      emailNotifications?: boolean;
+      templateAlerts?: boolean;
+      weeklyReports?: boolean;
+    };
+    theme?: {
+      theme?: string;
+      language?: string;
+    };
+  };
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   resetPasswordToken?: string;
@@ -120,6 +131,43 @@ const userSchema = new Schema<IUser>(
     deletedAt: {
       type: Date,
       select: false,
+    },
+    settings: {
+      type: {
+        notifications: {
+          type: {
+            emailNotifications: {
+              type: Boolean,
+              default: true,
+            },
+            templateAlerts: {
+              type: Boolean,
+              default: true,
+            },
+            weeklyReports: {
+              type: Boolean,
+              default: false,
+            },
+          },
+          default: {},
+        },
+        theme: {
+          type: {
+            theme: {
+              type: String,
+              enum: ['light', 'dark'],
+              default: 'dark',
+            },
+            language: {
+              type: String,
+              enum: ['en', 'id'],
+              default: 'en',
+            },
+          },
+          default: {},
+        },
+      },
+      default: {},
     },
   },
   {
