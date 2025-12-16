@@ -1,10 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  ChatMessage, 
+  ChatAIRequest, 
+  ChatAIResponse, 
+  AIFrameSpecification 
+} from '@/types/ai-frame.types';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
+/**
+ * POST /api/ai/chat
+ * 
+ * Chat dengan AI untuk mendapatkan bantuan dalam mendesain frame template
+ * AI akan membantu user menentukan spesifikasi frame dan menghasilkan frameSpec jika user sudah confirm
+ * 
+ * @param request - Request body berisi array messages
+ * @returns ChatAIResponse dengan message dan optional frameSpec
+ * 
+ * @example
+ * ```typescript
+ * // Request
+ * POST /api/ai/chat
+ * {
+ *   "messages": [
+ *     { "role": "user", "content": "Saya ingin frame dengan 3 foto vertikal" }
+ *   ]
+ * }
+ * 
+ * // Response
+ * {
+ *   "message": "Oke! Frame 3 foto vertikal...",
+ *   "frameSpec": {
+ *     "frameCount": 3,
+ *     "layout": "vertical",
+ *     "backgroundColor": "#FFD700",
+ *     ...
+ *   }
+ * }
+ * ```
+ */
 export async function POST(request: NextRequest) {
   try {
     let body;
@@ -18,12 +50,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { messages } = body;
+    const { messages }: ChatAIRequest = body;
 
     if (!messages || !Array.isArray(messages)) {
       console.error('Invalid messages:', messages);
       return NextResponse.json(
-        { error: 'Messages array is required and must be an array' },
+        { 
+          error: 'Messages array is required and must be an array' 
+        } as ChatAIResponse,
         { status: 400 }
       );
     }
@@ -118,13 +152,13 @@ Keep responses concise and friendly. Be creative and supportive!`;
     }
 
     // Try to extract frame spec from the response if it contains JSON
-    let frameSpec = null;
+    let frameSpec: AIFrameSpecification | undefined = undefined;
     const jsonMatch = assistantMessage.match(/```json\n([\s\S]*?)\n```/);
     if (jsonMatch) {
       try {
         const jsonData = JSON.parse(jsonMatch[1]);
         if (jsonData.frameSpec) {
-          frameSpec = jsonData.frameSpec;
+          frameSpec = jsonData.frameSpec as AIFrameSpecification;
           console.log('Extracted frame spec from response:', frameSpec);
         }
       } catch (e) {
@@ -133,10 +167,9 @@ Keep responses concise and friendly. Be creative and supportive!`;
     }
 
     return NextResponse.json({
-      success: true,
       message: assistantMessage,
       frameSpec: frameSpec, // Include frame spec if it was in the response
-    });
+    } as ChatAIResponse);
   } catch (error) {
     console.error('AI Chat Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

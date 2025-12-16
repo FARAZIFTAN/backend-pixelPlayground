@@ -1,19 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  GenerateFrameRequest, 
+  GenerateFrameResponse, 
+  validateFrameRequest 
+} from '@/types/ai-frame.types';
 
-interface FrameRequest {
-  frameCount: number;
-  layout: 'vertical' | 'horizontal' | 'grid';
-  backgroundColor: string;
-  borderColor: string;
-  borderThickness: number;
-  borderRadius: number;
-  gradientFrom?: string;
-  gradientTo?: string;
-}
-
+/**
+ * POST /api/ai/generate-frame
+ * 
+ * Generate frame template sebagai SVG image berdasarkan spesifikasi yang diberikan
+ * 
+ * @param request - Request body berisi GenerateFrameRequest
+ * @returns GenerateFrameResponse dengan base64 encoded SVG image
+ * 
+ * @example
+ * ```typescript
+ * // Request
+ * POST /api/ai/generate-frame
+ * {
+ *   "frameCount": 3,
+ *   "layout": "vertical",
+ *   "backgroundColor": "#FFD700",
+ *   "borderColor": "#FFA500",
+ *   "gradientFrom": "#FFD700",
+ *   "gradientTo": "#FFC700"
+ * }
+ * 
+ * // Response
+ * {
+ *   "success": true,
+ *   "image": "base64_encoded_svg...",
+ *   "contentType": "image/svg+xml"
+ * }
+ * ```
+ */
 export async function POST(request: NextRequest) {
   try {
-    const body: FrameRequest = await request.json();
+    const body: GenerateFrameRequest = await request.json();
+
+    // Validate request
+    const validation = validateFrameRequest(body);
+    if (!validation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.errors.join(', '),
+        } as GenerateFrameResponse,
+        { status: 400 }
+      );
+    }
 
     console.log('Generating frame with specs:', body);
 
@@ -27,7 +63,7 @@ export async function POST(request: NextRequest) {
       success: true,
       image: base64Image,
       contentType: 'image/svg+xml',
-    });
+    } as GenerateFrameResponse);
 
   } catch (error) {
     console.error('Frame Generation Error:', error);
@@ -35,15 +71,22 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
+        success: false,
         error: 'Failed to generate frame',
         details: errorMessage,
-      },
+      } as GenerateFrameResponse,
       { status: 500 }
     );
   }
 }
 
-function createFrameSVG(config: FrameRequest): string {
+/**
+ * Create SVG image untuk frame template
+ * 
+ * @param config - Frame configuration
+ * @returns SVG string
+ */
+function createFrameSVG(config: GenerateFrameRequest): string {
   const width = 600;
   const height = 900;
   const padding = 30;
