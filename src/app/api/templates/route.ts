@@ -16,34 +16,81 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    // Build query
-    const query: any = {};
+    // Get userId from token (if authenticated)
+    const token = request.headers.get('authorization')?.replace('Bearer ', '');
+    let userId: string | null = null;
     
+    if (token) {
+      try {
+        const { verifyToken } = await import('@/lib/jwt');
+        const decoded = verifyToken(token);
+        if (decoded && typeof decoded !== 'string') {
+          userId = decoded.userId;
+        }
+      } catch (error) {
+        // Token invalid or expired, continue as unauthenticated user
+        console.log('Token verification failed, showing public templates only');
+      }
+    }
+
+    // Build query with $and to properly combine all conditions
+    const query: any = { $and: [] };
+    
+    // Filter by category
     if (category && category !== 'All') {
-      query.category = category;
+      query.$and.push({ category });
     }
     
+    // Filter by premium status
     if (isPremium !== null && isPremium !== undefined) {
-      query.isPremium = isPremium === 'true';
+      query.$and.push({ isPremium: isPremium === 'true' });
     }
     
+    // Filter by active status
     if (isActive !== null && isActive !== undefined) {
-      query.isActive = isActive === 'true';
+      query.$and.push({ isActive: isActive === 'true' });
     } else {
       // Default: only show active templates for public
-      query.isActive = true;
+      query.$and.push({ isActive: true });
     }
+
+    // Filter by visibility:
+    // - Public templates: visible to everyone
+    // - Private templates: only visible to creator
+    // - Templates without visibility field: treated as public (backward compatibility)
+    if (userId) {
+      // Authenticated: show public templates OR user's own private templates OR templates without visibility (legacy)
+      query.$and.push({
+        $or: [
+          { visibility: 'public' },
+          { visibility: { $exists: false } }, // Legacy templates without visibility field
+          { visibility: 'private', createdBy: userId }
+        ]
+      });
+    } else {
+      // Unauthenticated: show public templates OR templates without visibility (legacy)
+      query.$and.push({
+        $or: [
+          { visibility: 'public' },
+          { visibility: { $exists: false } } // Legacy templates without visibility field
+        ]
+      });
+    }
+
+    // Simplify query if $and array is empty or has only one element
+    const finalQuery = query.$and.length === 0 ? {} : 
+                      query.$and.length === 1 ? query.$and[0] : query;
 
     // Fetch templates
     const templates = await (Template as any)
-      .find(query)
+      .find(finalQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
     // Get total count
-    const total = await (Template as any).countDocuments(query);
+    const total = await (Template as any).countDocuments(finalQuery);
 
     return NextResponse.json(
       {

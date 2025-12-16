@@ -9,6 +9,8 @@ export interface ILayoutPosition {
   rotation?: number; // opsional, derajat
 }
 
+export type TemplateVisibility = 'public' | 'private';
+
 export interface ITemplate extends Document {
   name: string;
   category: string;
@@ -21,6 +23,9 @@ export interface ITemplate extends Document {
   layoutPositions: ILayoutPosition[];
   isActive: boolean;
   createdBy?: string;
+  visibility: TemplateVisibility;
+  isAIGenerated: boolean;
+  aiFrameSpec?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,6 +84,7 @@ const templateSchema = new Schema<ITemplate>(
         'Holiday',
         'Love',
         'General',
+        'AI Generated',
       ],
       default: 'General',
     },
@@ -129,6 +135,21 @@ const templateSchema = new Schema<ITemplate>(
       type: String,
       index: true,
     },
+    visibility: {
+      type: String,
+      enum: ['public', 'private'],
+      default: 'public',
+      index: true,
+    },
+    isAIGenerated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    aiFrameSpec: {
+      type: Schema.Types.Mixed,
+      required: false,
+    },
   },
   {
     timestamps: true,
@@ -139,6 +160,8 @@ const templateSchema = new Schema<ITemplate>(
 templateSchema.index({ category: 1, isActive: 1 });
 templateSchema.index({ isPremium: 1, isActive: 1 });
 templateSchema.index({ name: 'text' });
+templateSchema.index({ visibility: 1, isAIGenerated: 1 });
+templateSchema.index({ createdBy: 1, visibility: 1 });
 
 const Template = models.Template || model<ITemplate>('Template', templateSchema);
 
