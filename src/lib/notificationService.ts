@@ -40,6 +40,7 @@ export const notificationService = {
 
   /**
    * Create notification for all admins
+   * Includes deduplication to prevent duplicate notifications within 10 seconds
    */
   async notifyAllAdmins(
     title: string,
@@ -51,6 +52,27 @@ export const notificationService = {
       // @ts-ignore - Mongoose types
       const admins = await User.find({ role: 'admin' }).select('_id');
       
+      if (admins.length === 0) {
+        return [];
+      }
+
+      const now = new Date();
+      const tenSecondsAgo = new Date(now.getTime() - 10000);
+
+      // Check if similar notification was created recently to prevent duplicates
+      // @ts-ignore - Mongoose types
+      const recentNotifications = await Notification.findOne({
+        title,
+        message,
+        type,
+        createdAt: { $gte: tenSecondsAgo },
+      }).lean();
+
+      if (recentNotifications) {
+        console.log('[NOTIFICATION] Duplicate notification detected, skipping creation');
+        return [];
+      }
+
       const notifications = admins.map((admin) => ({
         userId: admin._id,
         title,
@@ -58,13 +80,14 @@ export const notificationService = {
         type,
         data: data || {},
         isRead: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: now,
+        updatedAt: now,
       }));
 
       if (notifications.length > 0) {
         // @ts-ignore - Mongoose types
         await Notification.insertMany(notifications);
+        console.log(`[NOTIFICATION] Created ${notifications.length} notifications for admins`);
       }
 
       return notifications;

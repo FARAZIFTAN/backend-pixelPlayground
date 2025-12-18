@@ -49,6 +49,8 @@ const NotificationSchema = new mongoose.Schema(
 // Index for faster queries
 NotificationSchema.index({ userId: 1, isRead: 1 });
 NotificationSchema.index({ userId: 1, createdAt: -1 });
+// Compound index to help with deduplication check
+NotificationSchema.index({ title: 1, message: 1, type: 1, createdAt: -1 });
 
 const Notification = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);
 

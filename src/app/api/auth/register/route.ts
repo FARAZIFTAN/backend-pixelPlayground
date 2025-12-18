@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Send notification to admins about new user registration
     try {
+      console.log('[REGISTER] Sending notification to admins for new user:', user.email);
       await notificationService.notifyAllAdmins(
         'New User Registration',
         `${user.name} (${user.email}) has registered`,
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
           userEmail: user.email,
         }
       );
+      console.log('[REGISTER] Notification sent successfully');
     } catch (notificationError) {
       console.error('Error sending notification:', notificationError);
       // Don't fail registration if notification fails

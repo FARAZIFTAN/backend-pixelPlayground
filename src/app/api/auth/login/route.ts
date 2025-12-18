@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
     // Send notification to admins about new login
     try {
       if (user.role === 'user') {
+        console.log('[LOGIN] Sending notification to admins for user:', user.email);
         await notificationService.notifyAllAdmins(
           'New User Login',
           `${user.name} (${user.email}) has logged in`,
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
             userEmail: user.email,
           }
         );
+        console.log('[LOGIN] Notification sent successfully');
       }
     } catch (notificationError) {
       console.error('[LOGIN] Error sending notification:', notificationError);
