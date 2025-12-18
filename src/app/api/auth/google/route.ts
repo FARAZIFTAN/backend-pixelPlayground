@@ -6,7 +6,14 @@ import { generateToken } from '@/lib/jwt';
 import type { Model } from 'mongoose';
 import type { IUser } from '@/models/User';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  {
+    // Allow for clock skew up to 5 minutes
+    clockSkewSeconds: 300,
+  }
+);
 
 // POST /api/auth/google - Google OAuth login/register
 export async function POST(request: NextRequest) {
@@ -20,11 +27,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify Google token
-    const ticket = await client.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    // Verify Google token with retry mechanism
+    let ticket;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        ticket = await client.verifyIdToken({
+          idToken: token,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        break; // Success, exit retry loop
+      } catch (error: any) {
+        if (error.message.includes('Token used too early') && retryCount < maxRetries - 1) {
+          // Wait a bit and retry for clock skew issues
+          console.log(`Token timing issue, retrying... (${retryCount + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1))); // Wait 2s, 4s, 6s
+          retryCount++;
+          continue;
+        }
+
+        // For other errors, try to decode token manually to check timing
+        if (error.message.includes('Token used too early') && retryCount === maxRetries - 1) {
+          try {
+            // Try to decode the JWT to check nbf claim
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+              const currentTime = Math.floor(Date.now() / 1000);
+              const nbf = payload.nbf;
+
+              if (nbf && currentTime < nbf) {
+                const waitTime = (nbf - currentTime) * 1000 + 1000; // Add 1 second buffer
+                console.log(`Token not valid until ${new Date(nbf * 1000).toISOString()}, waiting ${waitTime}ms...`);
+                await new Promise(resolve => setTimeout(resolve, Math.min(waitTime, 10000))); // Max 10 seconds
+
+                // Try verification again after waiting
+                ticket = await client.verifyIdToken({
+                  idToken: token,
+                  audience: process.env.GOOGLE_CLIENT_ID,
+                });
+                break;
+              }
+            }
+          } catch (decodeError) {
+            console.error('Failed to decode token manually:', decodeError);
+          }
+        }
+
+        throw error; // Re-throw if not a timing issue or all retries failed
+      }
+    }
+
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to verify Google token after retries' },
+        { status: 401 }
+      );
+    }
 
     const payload = ticket.getPayload();
     
@@ -105,12 +166,28 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: unknown) {
     console.error('Google auth error:', error);
-    
-    if (error instanceof Error && error.message.includes('Token used too late')) {
-      return NextResponse.json(
-        { success: false, message: 'Google token expired. Please try again.' },
-        { status: 401 }
-      );
+
+    if (error instanceof Error) {
+      if (error.message.includes('Token used too late') || error.message.includes('Token used too early')) {
+        return NextResponse.json(
+          { success: false, message: 'Google token timing issue. Please try again.' },
+          { status: 401 }
+        );
+      }
+
+      if (error.message.includes('Invalid token') || error.message.includes('Wrong number of segments')) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid Google token. Please try again.' },
+          { status: 401 }
+        );
+      }
+
+      if (error.message.includes('Invalid audience')) {
+        return NextResponse.json(
+          { success: false, message: 'Google authentication configuration error.' },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json(
