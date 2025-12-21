@@ -20,7 +20,7 @@ export async function PATCH(
       );
     }
 
-    const feedback = await Feedback.findByIdAndUpdate(
+    const feedback = await (Feedback as any).findByIdAndUpdate(
       feedbackId,
       {
         status,
@@ -69,7 +69,7 @@ export async function DELETE(
       );
     }
 
-    const feedback = await Feedback.findByIdAndDelete(feedbackId).lean();
+    const feedback = await (Feedback as any).findByIdAndDelete(feedbackId).lean();
 
     if (!feedback) {
       return NextResponse.json(

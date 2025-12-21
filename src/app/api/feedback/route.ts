@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     // Get all feedback
-    const feedbacks = await Feedback.find().sort({ createdAt: -1 }).lean();
+    const feedbacks = await (Feedback as any).find().sort({ createdAt: -1 }).lean();
 
     return NextResponse.json(
       {
