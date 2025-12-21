@@ -63,17 +63,17 @@ export async function PATCH(
     // Create public template from approved submission
     const newTemplate = await (Template as any).create({
       name: submission.name,
-      description: submission.description,
+      description: submission.description || '',
       frameUrl: submission.frameUrl,
       thumbnail: submission.thumbnail,
       frameCount: submission.frameCount,
-      layout: submission.layout,
-      frameSpec: submission.frameSpec,
       layoutPositions: submission.layoutPositions,
       isPremium: submission.isPremium,
-      category: 'Community',
-      uploadedBy: submission.userId,
-      isPublic: true,
+      category: 'General',
+      createdBy: submission.userId.toString(),
+      visibility: 'public',
+      isActive: true,
+      isAIGenerated: false,
     });
 
     console.log(
@@ -92,10 +92,13 @@ export async function PATCH(
     });
   } catch (error) {
     console.error('Error approving submission:', error);
+    console.error('Error details:', error instanceof Error ? error.message : error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to approve submission',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );

@@ -21,16 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user is premium
-    console.log('User isPremium from auth:', auth.isPremium);
-    
-    if (!auth.isPremium) {
-      console.log('User is not premium');
-      return NextResponse.json(
-        { success: false, error: 'Only premium users can submit frames' },
-        { status: 403 }
-      );
-    }
+    // Note: Frame submission is now available for all authenticated users
+    console.log('User submitting frame:', auth.userId, auth.email);
 
     const body = await request.json();
     const {
@@ -103,19 +95,32 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
+    const skip = parseInt(url.searchParams.get('skip') || '0');
 
     const query: any = { userId: auth.userId };
     if (status) {
       query.status = status;
     }
 
-    const submissions = await (UserSubmittedFrame as any).find(query)
+    // Optimized query with limit and select only needed fields
+    const submissions = await (UserSubmittedFrame as any)
+      .find(query)
+      .select('name description thumbnail frameCount status createdAt isPremium rejectionReason')
       .sort({ createdAt: -1 })
-      .lean();
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .exec();
+
+    const total = await (UserSubmittedFrame as any).countDocuments(query);
 
     return NextResponse.json({
       success: true,
       data: submissions,
+      count: submissions.length,
+      total,
+      hasMore: total > skip + submissions.length,
     });
   } catch (error) {
     console.error('Error fetching submissions:', error);

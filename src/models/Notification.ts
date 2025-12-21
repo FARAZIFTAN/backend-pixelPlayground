@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 export interface INotification extends mongoose.Document {
-  userId: mongoose.Schema.Types.ObjectId;
+  userId: string;
   title: string;
   message: string;
   type: 'template' | 'user' | 'system' | 'analytics';
@@ -14,7 +14,7 @@ export interface INotification extends mongoose.Document {
 const NotificationSchema = new mongoose.Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: 'User',
       required: true,
       index: true,

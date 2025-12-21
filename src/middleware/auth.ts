@@ -24,6 +24,7 @@ export async function verifyAuth(
     const authHeader = request.headers.get('authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[AUTH] No authorization header or invalid format');
       return null;
     }
 
@@ -31,22 +32,35 @@ export async function verifyAuth(
     const decoded = verifyToken(token);
 
     if (!decoded) {
+      console.log('[AUTH] Token verification failed');
       return null;
     }
 
+    console.log('[AUTH] Token decoded:', {
+      userId: decoded.userId,
+      email: decoded.email,
+      name: decoded.name,
+      role: decoded.role
+    });
+
     // Check if user still exists and is active, and get isPremium
     await connectDB();
-    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive isPremium');
+    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive isPremium role');
     
     if (!user || user.isDeleted || !user.isActive) {
+      console.log('[AUTH] User not found, deleted, or inactive');
       return null;
     }
+
+    // Use role from database if available, otherwise from token
+    const userRole = user.role || decoded.role || 'user';
+    console.log('[AUTH] Final role:', userRole, '(from DB:', user.role, ', from token:', decoded.role, ')');
 
     return {
       userId: decoded.userId,
       email: decoded.email,
       name: decoded.name,
-      role: decoded.role || 'user',
+      role: userRole,
       isPremium: user.isPremium || false,
     };
   } catch (error) {

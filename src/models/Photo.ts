@@ -1,5 +1,10 @@
 import { Schema, model, models, Document, Model } from 'mongoose';
 
+/**
+ * @deprecated This model is deprecated. Use FinalComposite model instead.
+ * FinalComposite provides better structure with sessionId reference.
+ * This model is kept for backward compatibility only.
+ */
 export interface IPhoto extends Document {
   userId: string;
   title: string;

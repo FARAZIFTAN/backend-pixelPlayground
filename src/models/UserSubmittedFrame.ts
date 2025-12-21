@@ -1,7 +1,7 @@
 import { Schema, model, models, Document } from 'mongoose';
 
 export interface IUserSubmittedFrame extends Document {
-  userId: Schema.Types.ObjectId;
+  userId: string;
   name: string;
   description: string;
   frameUrl: string; // base64 SVG
@@ -30,13 +30,13 @@ export interface IUserSubmittedFrame extends Document {
   createdAt: Date;
   updatedAt: Date;
   approvedAt?: Date;
-  approvedBy?: Schema.Types.ObjectId; // Admin user who approved
+  approvedBy?: string; // Admin user who approved
 }
 
 const userSubmittedFrameSchema = new Schema<IUserSubmittedFrame>(
   {
     userId: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: 'User',
       required: [true, 'User ID is required'],
       index: true,
@@ -97,7 +97,7 @@ const userSubmittedFrameSchema = new Schema<IUserSubmittedFrame>(
       type: Date,
     },
     approvedBy: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: 'User',
     },
   },

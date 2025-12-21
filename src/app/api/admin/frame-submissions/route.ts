@@ -31,16 +31,28 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const status = url.searchParams.get('status') || 'pending';
+    const limit = parseInt(url.searchParams.get('limit') || '50');
+    const skip = parseInt(url.searchParams.get('skip') || '0');
 
-    const submissions = await (UserSubmittedFrame as any).find({ status })
-      .populate('userId', 'name email isPremium')
+    // Optimized query with limit and minimal population
+    const submissions = await (UserSubmittedFrame as any)
+      .find({ status })
+      .select('name description thumbnail frameUrl layoutPositions frameCount status createdAt userId isPremium')
+      .populate('userId', 'name email')
       .sort({ createdAt: -1 })
-      .lean();
+      .limit(limit)
+      .skip(skip)
+      .lean()
+      .exec();
+
+    const total = await (UserSubmittedFrame as any).countDocuments({ status });
 
     return NextResponse.json({
       success: true,
       data: submissions,
       count: submissions.length,
+      total,
+      hasMore: total > skip + submissions.length,
     });
   } catch (error) {
     console.error('Error fetching submissions:', error);
