@@ -15,11 +15,11 @@ export interface AuthenticatedRequest extends NextRequest {
 /**
  * Middleware to verify JWT token from Authorization header
  * Also checks if user is deleted or inactive
- * Usage: const user = await verifyAuth(request);
+ * Usage: const auth = await verifyAuth(request);
  */
 export async function verifyAuth(
   request: NextRequest
-): Promise<{ userId: string; email: string; name: string; role: 'user' | 'admin' } | null> {
+): Promise<{ userId: string; email: string; name: string; role: 'user' | 'admin'; isPremium: boolean } | null> {
   try {
     const authHeader = request.headers.get('authorization');
 
@@ -34,9 +34,9 @@ export async function verifyAuth(
       return null;
     }
 
-    // Check if user still exists and is active
+    // Check if user still exists and is active, and get isPremium
     await connectDB();
-    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive');
+    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive isPremium');
     
     if (!user || user.isDeleted || !user.isActive) {
       return null;
@@ -47,6 +47,7 @@ export async function verifyAuth(
       email: decoded.email,
       name: decoded.name,
       role: decoded.role || 'user',
+      isPremium: user.isPremium || false,
     };
   } catch (error) {
     console.error('Auth verification error:', error);

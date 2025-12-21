@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/User';
 import UserSubmittedFrame from '@/models/UserSubmittedFrame';
 import { verifyAuth } from '@/middleware/auth';
+import connectDB from '@/lib/mongodb';
 
 /**
  * POST /api/user-submissions/frames
@@ -9,7 +10,10 @@ import { verifyAuth } from '@/middleware/auth';
  */
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
+    console.log('Auth:', auth);
     if (!auth) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -18,8 +22,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is premium
-    const user = await (User as any).findById(auth.userId);
-    if (!user || !user.isPremium) {
+    console.log('User isPremium from auth:', auth.isPremium);
+    
+    if (!auth.isPremium) {
+      console.log('User is not premium');
       return NextResponse.json(
         { success: false, error: 'Only premium users can submit frames' },
         { status: 403 }
@@ -85,6 +91,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
     if (!auth) {
       return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import UserSubmittedFrame from '@/models/UserSubmittedFrame';
 import { verifyAuth } from '@/middleware/auth';
+import connectDB from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
 /**
@@ -12,6 +13,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
     if (!auth) {
       return NextResponse.json(
@@ -62,6 +65,8 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
     if (!auth) {
       return NextResponse.json(

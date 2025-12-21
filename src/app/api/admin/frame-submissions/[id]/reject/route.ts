@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/models/User';
 import UserSubmittedFrame from '@/models/UserSubmittedFrame';
 import { verifyAuth } from '@/middleware/auth';
+import connectDB from '@/lib/mongodb';
 
 /**
  * PATCH /api/admin/frame-submissions/[id]/reject
@@ -12,6 +13,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
     if (!auth) {
       return NextResponse.json(
@@ -21,8 +24,7 @@ export async function PATCH(
     }
 
     // Verify admin role
-    const admin = await (User as any).findById(auth.userId);
-    if (!admin || admin.role !== 'admin') {
+    if (auth.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }

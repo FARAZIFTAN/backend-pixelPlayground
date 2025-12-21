@@ -3,6 +3,7 @@ import User from '@/models/User';
 import UserSubmittedFrame from '@/models/UserSubmittedFrame';
 import Template from '@/models/Template';
 import { verifyAuth } from '@/middleware/auth';
+import connectDB from '@/lib/mongodb';
 
 /**
  * GET /api/admin/frame-submissions
@@ -10,6 +11,8 @@ import { verifyAuth } from '@/middleware/auth';
  */
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
+
     const auth = await verifyAuth(request);
     if (!auth) {
       return NextResponse.json(
@@ -19,8 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify admin role
-    const admin = await (User as any).findById(auth.userId);
-    if (!admin || admin.role !== 'admin') {
+    if (auth.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
