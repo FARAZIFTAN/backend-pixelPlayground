@@ -12,6 +12,8 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   isActive: boolean;
   isDeleted: boolean;
+  isPremium: boolean;
+  premiumExpiresAt?: Date;
   lastLogin?: Date;
   loginHistory: Array<{
     ipAddress: string;
@@ -95,6 +97,13 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
       select: false,
+    },
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    premiumExpiresAt: {
+      type: Date,
     },
     lastLogin: {
       type: Date,
