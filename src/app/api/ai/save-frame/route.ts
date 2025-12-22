@@ -208,33 +208,41 @@ export async function POST(request: NextRequest) {
 
 /**
  * Generate layout positions based on frame specification
- * Includes padding between photos for better visual spacing
+ * Returns pixel coordinates for 600x900 frame size (standard AI frame dimensions)
  */
 function generateLayoutPositions(frameSpec: AIFrameSpecification): any[] {
   const { layout, frameCount } = frameSpec;
   const positions = [];
-  const padding = 2; // 2% padding between photos
+  
+  // AI Frame standard dimensions
+  const frameWidth = 600;
+  const frameHeight = 900;
+  const padding = 20; // 20px padding between photos
 
   if (layout === 'vertical') {
     const totalPadding = padding * (frameCount - 1);
-    const height = (100 - totalPadding) / frameCount;
+    const photoHeight = (frameHeight - totalPadding) / frameCount;
+    const photoWidth = frameWidth;
+    
     for (let i = 0; i < frameCount; i++) {
       positions.push({
         x: 0,
-        y: i * (height + padding),
-        width: 100,
-        height: height,
+        y: i * (photoHeight + padding),
+        width: photoWidth,
+        height: photoHeight,
       });
     }
   } else if (layout === 'horizontal') {
     const totalPadding = padding * (frameCount - 1);
-    const width = (100 - totalPadding) / frameCount;
+    const photoWidth = (frameWidth - totalPadding) / frameCount;
+    const photoHeight = frameHeight;
+    
     for (let i = 0; i < frameCount; i++) {
       positions.push({
-        x: i * (width + padding),
+        x: i * (photoWidth + padding),
         y: 0,
-        width: width,
-        height: 100,
+        width: photoWidth,
+        height: photoHeight,
       });
     }
   } else if (layout === 'grid') {
@@ -242,8 +250,8 @@ function generateLayoutPositions(frameSpec: AIFrameSpecification): any[] {
     const rows = Math.ceil(frameCount / cols);
     const totalPaddingX = padding * (cols - 1);
     const totalPaddingY = padding * (rows - 1);
-    const cellWidth = (100 - totalPaddingX) / cols;
-    const cellHeight = (100 - totalPaddingY) / rows;
+    const cellWidth = (frameWidth - totalPaddingX) / cols;
+    const cellHeight = (frameHeight - totalPaddingY) / rows;
 
     for (let i = 0; i < frameCount; i++) {
       const col = i % cols;
