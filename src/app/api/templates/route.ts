@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const isPremium = searchParams.get('isPremium');
     const isActive = searchParams.get('isActive');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '20'); // Reduced from 50 to 20
     const skip = (page - 1) * limit;
 
     // Get userId from token (if authenticated)
@@ -81,9 +81,10 @@ export async function GET(request: NextRequest) {
     const finalQuery = query.$and.length === 0 ? {} : 
                       query.$and.length === 1 ? query.$and[0] : query;
 
-    // Fetch templates
+    // Fetch templates - exclude large frameUrl for list view, only include thumbnail
     const templates = await (Template as any)
       .find(finalQuery)
+      .select('-frameUrl') // Exclude large base64 frameUrl from list
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

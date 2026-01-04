@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
             email: user.email,
             role: user.role || 'user',
             profilePicture: user.profilePicture || null,
+            isPremium: user.isPremium || false,
+            premiumExpiresAt: user.premiumExpiresAt || null,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
           },

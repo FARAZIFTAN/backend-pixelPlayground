@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import UserGeneratedFrame from '@/models/UserGeneratedFrame';
 import User from '@/models/User';
+import UsageLimit from '@/models/UsageLimit';
 import { Types } from 'mongoose';
 import { verifyAuth } from '@/middleware/auth';
 
@@ -64,6 +65,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'User not authenticated' },
         { status: 401 }
+      );
+    }
+
+    // Get user details to check premium status
+    const userDoc = await User.findById(user.userId);
+    if (!userDoc) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Determine package type
+    let packageType: 'free' | 'pro' = 'free';
+    if (userDoc.isPremium && userDoc.premiumExpiresAt && userDoc.premiumExpiresAt > new Date()) {
+      // User has active premium
+      packageType = 'pro';
+    }
+
+    // Check usage limit
+    try {
+      const usageLimit = await UsageLimit.getOrCreateToday(user.userId, packageType);
+      await usageLimit.incrementFrameUpload();
+    } catch (error: any) {
+      console.error('Usage limit exceeded:', error.message);
+      return NextResponse.json(
+        { 
+          error: 'Daily frame upload limit reached',
+          message: error.message,
+          packageType,
+          upgradeUrl: '/upgrade-pro'
+        },
+        { status: 429 } // Too Many Requests
       );
     }
 

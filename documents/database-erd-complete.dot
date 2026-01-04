@@ -1,0 +1,360 @@
+digraph KaryaKlik_Database_ERD {
+  // Graph settings
+  rankdir=TB;
+  node [shape=record, fontname="Arial", fontsize=10];
+  edge [fontname="Arial", fontsize=9];
+  
+  // Color scheme
+  graph [bgcolor="#F8F9FA"];
+  
+  // ================== CORE ENTITIES ==================
+  
+  // 1. USER - Central entity
+  User [
+    label="{User|
+    + _id: ObjectId\l
+    + name: String\l
+    + email: String (unique)\l
+    + password: String\l
+    + googleId: String\l
+    + phone: String\l
+    + profilePicture: String\l
+    + role: Enum(user, admin)\l
+    + isEmailVerified: Boolean\l
+    + isActive: Boolean\l
+    + isDeleted: Boolean\l
+    + isPremium: Boolean\l
+    + premiumExpiresAt: Date\l
+    + lastLogin: Date\l
+    + loginHistory: Array\l
+    + settings: Object\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#FFE5E5"
+    style=filled
+  ];
+  
+  // 2. TEMPLATE
+  Template [
+    label="{Template|
+    + _id: ObjectId\l
+    + name: String\l
+    + category: String\l
+    + description: String\l
+    + tags: Array\l
+    + thumbnail: String\l
+    + frameUrl: String\l
+    + isPremium: Boolean\l
+    + frameCount: Number\l
+    + layoutPositions: Array\l
+    + isActive: Boolean\l
+    + createdBy: String\l
+    + visibility: Enum(public, private)\l
+    + isAIGenerated: Boolean\l
+    + aiFrameSpec: Object\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#E5F5FF"
+    style=filled
+  ];
+  
+  // 3. PHOTO SESSION
+  PhotoSession [
+    label="{PhotoSession|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + templateId: String (FK)\l
+    + sessionName: String\l
+    + status: Enum(active, completed, cancelled)\l
+    + capturedPhotos: Array(FK)\l
+    + finalComposite: String (FK)\l
+    + metadata: Object\l
+    + startedAt: Date\l
+    + completedAt: Date\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#FFF5E5"
+    style=filled
+  ];
+  
+  // 4. CAPTURED PHOTO
+  CapturedPhoto [
+    label="{CapturedPhoto|
+    + _id: ObjectId\l
+    + sessionId: String (FK)\l
+    + userId: String (FK)\l
+    + photoUrl: String\l
+    + thumbnailUrl: String\l
+    + order: Number\l
+    + metadata: Object\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#F0FFE5"
+    style=filled
+  ];
+  
+  // 5. FINAL COMPOSITE
+  FinalComposite [
+    label="{FinalComposite|
+    + _id: ObjectId\l
+    + sessionId: String (FK)\l
+    + userId: String (FK)\l
+    + templateId: String (FK)\l
+    + compositeUrl: String\l
+    + thumbnailUrl: String\l
+    + isPublic: Boolean\l
+    + likes: Number\l
+    + views: Number\l
+    + metadata: Object\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#FFE5F5"
+    style=filled
+  ];
+  
+  // 6. PHOTO (Deprecated)
+  Photo [
+    label="{Photo (Deprecated)|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + title: String\l
+    + description: String\l
+    + imageUrl: String\l
+    + thumbnailUrl: String\l
+    + isPublic: Boolean\l
+    + templateId: String (FK)\l
+    + views: Number\l
+    + likes: Number\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#E5E5E5"
+    style=filled
+  ];
+  
+  // ================== PAYMENT & PREMIUM ==================
+  
+  // 7. PAYMENT
+  Payment [
+    label="{Payment|
+    + _id: ObjectId\l
+    + userId: ObjectId (FK)\l
+    + packageName: Enum(KaryaKlik Pro)\l
+    + packageType: Enum(pro)\l
+    + amount: Number\l
+    + durationMonths: Number\l
+    + bankName: String\l
+    + bankAccountNumber: String\l
+    + bankAccountName: String\l
+    + paymentProofUrl: String\l
+    + paymentProofUploadedAt: Date\l
+    + status: Enum(pending_payment, pending_verification, approved, rejected)\l
+    + rejectionReason: String\l
+    + adminNotes: String\l
+    + approvedBy: ObjectId (FK)\l
+    + approvedAt: Date\l
+    + rejectedBy: ObjectId (FK)\l
+    + rejectedAt: Date\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#FFFFE5"
+    style=filled
+  ];
+  
+  // 8. USAGE LIMIT
+  UsageLimit [
+    label="{UsageLimit|
+    + _id: ObjectId\l
+    + userId: ObjectId (FK)\l
+    + date: String (YYYY-MM-DD)\l
+    + aiGenerationCount: Number\l
+    + aiGenerationLimit: Number\l
+    + frameUploadCount: Number\l
+    + frameUploadLimit: Number\l
+    + packageType: Enum(free, pro)\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#E5FFFF"
+    style=filled
+  ];
+  
+  // ================== USER GENERATED CONTENT ==================
+  
+  // 9. USER GENERATED FRAME
+  UserGeneratedFrame [
+    label="{UserGeneratedFrame|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + name: String\l
+    + description: String\l
+    + thumbnail: String\l
+    + frameUrl: String\l
+    + frameCount: Number\l
+    + layoutPositions: Array\l
+    + frameSpec: Object\l
+    + isActive: Boolean\l
+    + isFavorite: Boolean\l
+    + usageCount: Number\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#F5E5FF"
+    style=filled
+  ];
+  
+  // 10. USER SUBMITTED FRAME
+  UserSubmittedFrame [
+    label="{UserSubmittedFrame|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + name: String\l
+    + description: String\l
+    + frameUrl: String\l
+    + thumbnail: String\l
+    + frameCount: Number\l
+    + layout: Enum(vertical, horizontal, grid)\l
+    + frameSpec: Object\l
+    + layoutPositions: Array\l
+    + status: Enum(pending, approved, rejected)\l
+    + isPremium: Boolean\l
+    + rejectionReason: String\l
+    + approvedAt: Date\l
+    + approvedBy: String (FK)\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#E5F5E5"
+    style=filled
+  ];
+  
+  // ================== SYSTEM & ANALYTICS ==================
+  
+  // 11. ANALYTICS EVENT
+  AnalyticsEvent [
+    label="{AnalyticsEvent|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + sessionId: String\l
+    + eventType: String\l
+    + eventCategory: String\l
+    + templateId: String (FK)\l
+    + metadata: Object\l
+    + deviceInfo: String\l
+    + ipAddress: String\l
+    + referrer: String\l
+    + timestamp: Date\l
+    + createdAt: Date\l
+    }"
+    fillcolor="#FFF0E5"
+    style=filled
+  ];
+  
+  // 12. NOTIFICATION
+  Notification [
+    label="{Notification|
+    + _id: ObjectId\l
+    + userId: String (FK)\l
+    + title: String\l
+    + message: String\l
+    + type: Enum(template, user, system, analytics)\l
+    + isRead: Boolean\l
+    + data: Object\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#FFE5E5"
+    style=filled
+  ];
+  
+  // 13. FEEDBACK
+  Feedback [
+    label="{Feedback|
+    + _id: ObjectId\l
+    + name: String\l
+    + email: String\l
+    + message: String\l
+    + status: Enum(unread, read, replied)\l
+    + createdAt: Date\l
+    + updatedAt: Date\l
+    }"
+    fillcolor="#E5FFE5"
+    style=filled
+  ];
+  
+  // ================== RELATIONSHIPS ==================
+  
+  // USER relationships
+  User -> Payment [label="1:N\nhas payments" color="#C62828" fontcolor="#C62828"];
+  User -> PhotoSession [label="1:N\nhas sessions" color="#1976D2" fontcolor="#1976D2"];
+  User -> CapturedPhoto [label="1:N\nhas photos" color="#388E3C" fontcolor="#388E3C"];
+  User -> FinalComposite [label="1:N\nhas composites" color="#7B1FA2" fontcolor="#7B1FA2"];
+  User -> Photo [label="1:N\nhas photos (deprecated)" color="#757575" fontcolor="#757575" style=dashed];
+  User -> UserGeneratedFrame [label="1:N\ncreates frames" color="#E65100" fontcolor="#E65100"];
+  User -> UserSubmittedFrame [label="1:N\nsubmits frames" color="#0097A7" fontcolor="#0097A7"];
+  User -> UsageLimit [label="1:N\nhas limits" color="#F57C00" fontcolor="#F57C00"];
+  User -> Notification [label="1:N\nreceives notifications" color="#C2185B" fontcolor="#C2185B"];
+  User -> AnalyticsEvent [label="1:N\ngenerates events" color="#5D4037" fontcolor="#5D4037"];
+  
+  // PAYMENT relationships
+  Payment -> User [label="N:1\napproved/rejected by admin" color="#C62828" fontcolor="#C62828" style=dashed];
+  
+  // TEMPLATE relationships
+  Template -> PhotoSession [label="1:N\nused in sessions" color="#1976D2" fontcolor="#1976D2"];
+  Template -> FinalComposite [label="1:N\nused in composites" color="#7B1FA2" fontcolor="#7B1FA2"];
+  Template -> Photo [label="1:N\nused in photos (deprecated)" color="#757575" fontcolor="#757575" style=dashed];
+  Template -> AnalyticsEvent [label="1:N\ntracked in analytics" color="#5D4037" fontcolor="#5D4037"];
+  
+  // PHOTO SESSION relationships
+  PhotoSession -> CapturedPhoto [label="1:N\ncontains photos" color="#388E3C" fontcolor="#388E3C"];
+  PhotoSession -> FinalComposite [label="1:1\nproduces composite" color="#7B1FA2" fontcolor="#7B1FA2"];
+  
+  // USER SUBMITTED FRAME relationships
+  UserSubmittedFrame -> User [label="N:1\napproved by admin" color="#0097A7" fontcolor="#0097A7" style=dashed];
+  
+  // ================== LEGEND ==================
+  
+  subgraph cluster_legend {
+    label="Legend";
+    fontsize=12;
+    fontname="Arial Bold";
+    style=rounded;
+    bgcolor="#FFFFFF";
+    
+    legend [
+      shape=none
+      label=<
+        <table border="0" cellspacing="2" cellpadding="4">
+          <tr><td colspan="2" bgcolor="#E0E0E0"><b>Table Categories</b></td></tr>
+          <tr><td bgcolor="#FFE5E5">User Management</td><td>User, Notification</td></tr>
+          <tr><td bgcolor="#E5F5FF">Content</td><td>Template</td></tr>
+          <tr><td bgcolor="#FFF5E5">Sessions</td><td>PhotoSession</td></tr>
+          <tr><td bgcolor="#F0FFE5">Photos</td><td>CapturedPhoto</td></tr>
+          <tr><td bgcolor="#FFE5F5">Composites</td><td>FinalComposite</td></tr>
+          <tr><td bgcolor="#FFFFE5">Payment</td><td>Payment</td></tr>
+          <tr><td bgcolor="#E5FFFF">Limits</td><td>UsageLimit</td></tr>
+          <tr><td bgcolor="#F5E5FF">User Frames</td><td>UserGeneratedFrame</td></tr>
+          <tr><td bgcolor="#E5F5E5">Submissions</td><td>UserSubmittedFrame</td></tr>
+          <tr><td bgcolor="#FFF0E5">Analytics</td><td>AnalyticsEvent</td></tr>
+          <tr><td bgcolor="#E5FFE5">Feedback</td><td>Feedback</td></tr>
+          <tr><td bgcolor="#E5E5E5">Deprecated</td><td>Photo</td></tr>
+        </table>
+      >
+    ];
+  }
+  
+  // ================== NOTES ==================
+  
+  notes [
+    shape=note
+    label="Database Summary\n\nTotal Tables: 13\n\nCore: 6 tables\nPayment: 2 tables\nUser Content: 2 tables\nSystem: 3 tables\n\nAll relationships established\nwith proper foreign keys"
+    fillcolor="#FFFFCC"
+    style=filled
+  ];
+}

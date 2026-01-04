@@ -6,11 +6,9 @@ import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import PhotoSession from '@/models/PhotoSession';
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Next.js 14 App Router - Route Segment Config
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // POST /api/composites/upload - Upload composite image as file
 export async function POST(request: NextRequest) {

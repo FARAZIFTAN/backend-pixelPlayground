@@ -3,8 +3,9 @@ import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import PhotoSession from '@/models/PhotoSession';
 import Photo from '@/models/Photo';
-import Template from '@/models/Template';
+import Template, { type ITemplate } from '@/models/Template';
 import { verifyToken } from '@/lib/jwt';
+import type { Model } from 'mongoose';
 
 // POST /api/composites - Create final composite
 export async function POST(request: NextRequest) {
@@ -84,7 +85,8 @@ export async function POST(request: NextRequest) {
       // Get template name for title
       let templateName = 'Untitled';
       if (composite.templateId) {
-        const template = await Template.findById(composite.templateId);
+        const TemplateModel = Template as Model<ITemplate>;
+        const template = await TemplateModel.findOne({ _id: composite.templateId }).lean();
         if (template) {
           templateName = template.name;
         }

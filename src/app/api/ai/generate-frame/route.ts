@@ -4,6 +4,10 @@ import {
   GenerateFrameResponse, 
   validateFrameRequest 
 } from '@/types/ai-frame.types';
+import { verifyAuth } from '@/middleware/auth';
+import connectDB from '@/lib/mongodb';
+import User from '@/models/User';
+import UsageLimit from '@/models/UsageLimit';
 
 /**
  * POST /api/ai/generate-frame
@@ -36,6 +40,58 @@ import {
  */
 export async function POST(request: NextRequest) {
   try {
+    await connectDB();
+
+    // Verify authentication
+    const user = await verifyAuth(request);
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Authentication required',
+          details: 'Please login to use AI Template Creator',
+        } as GenerateFrameResponse,
+        { status: 401 }
+      );
+    }
+
+    // Get user details to check premium status
+    const userDoc = await User.findById(user.userId);
+    if (!userDoc) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User not found',
+        } as GenerateFrameResponse,
+        { status: 404 }
+      );
+    }
+
+    // Determine package type
+    let packageType: 'free' | 'pro' = 'free';
+    if (userDoc.isPremium && userDoc.premiumExpiresAt && userDoc.premiumExpiresAt > new Date()) {
+      // User has active premium
+      packageType = 'pro';
+    }
+
+    // Check usage limit
+    try {
+      const usageLimit = await UsageLimit.getOrCreateToday(user.userId, packageType);
+      await usageLimit.incrementAIGeneration();
+    } catch (error: any) {
+      console.error('AI generation limit exceeded:', error.message);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Daily AI generation limit reached',
+          details: error.message,
+          packageType,
+          upgradeUrl: '/upgrade-pro'
+        } as GenerateFrameResponse,
+        { status: 429 } // Too Many Requests
+      );
+    }
+
     const body: GenerateFrameRequest = await request.json();
 
     // Validate request

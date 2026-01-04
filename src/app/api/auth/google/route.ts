@@ -8,11 +8,7 @@ import type { IUser } from '@/models/User';
 
 const client = new OAuth2Client(
   process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  {
-    // Allow for clock skew up to 5 minutes
-    clockSkewSeconds: 300,
-  }
+  process.env.GOOGLE_CLIENT_SECRET
 );
 
 // POST /api/auth/google - Google OAuth login/register

@@ -166,6 +166,8 @@ export async function POST(request: NextRequest) {
             role: user.role || 'user',
             profilePicture: user.profilePicture || null,
             isEmailVerified: user.isEmailVerified,
+            isPremium: user.isPremium || false,
+            premiumExpiresAt: user.premiumExpiresAt || null,
             createdAt: user.createdAt,
           },
         },
