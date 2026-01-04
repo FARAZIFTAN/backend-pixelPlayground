@@ -85,10 +85,38 @@ export async function GET(request: NextRequest) {
     const templates = await (Template as any)
       .find(finalQuery)
       .select('-frameUrl') // Exclude large base64 frameUrl from list
+      .populate({
+        path: 'createdBy',
+        select: 'name email',
+        strictPopulate: false // Allow populate even if some refs are invalid
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
+
+    // Transform templates to include creatorName
+    const transformedTemplates = templates.map((template: any) => {
+      let creatorName = 'Anonymous';
+      
+      // Check if createdBy is populated (object with name/email)
+      if (template.createdBy && typeof template.createdBy === 'object') {
+        creatorName = template.createdBy.name || 
+                     template.createdBy.email?.split('@')[0] || 
+                     'Community Creator';
+      }
+      // If createdBy is still a string (legacy data), try to use it
+      else if (template.createdBy && typeof template.createdBy === 'string') {
+        // It's a user ID string, keep it but can't get name
+        creatorName = 'Community Creator';
+      }
+
+      return {
+        ...template,
+        creatorName,
+        createdBy: template.createdBy?._id || template.createdBy, // Keep the ID
+      };
+    });
 
     // Get total count
     const total = await (Template as any).countDocuments(finalQuery);
@@ -98,7 +126,7 @@ export async function GET(request: NextRequest) {
         success: true,
         message: 'Templates retrieved successfully',
         data: {
-          templates,
+          templates: transformedTemplates,
           pagination: {
             page,
             limit,

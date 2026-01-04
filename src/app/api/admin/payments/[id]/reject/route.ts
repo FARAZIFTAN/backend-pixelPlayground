@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Payment from '@/models/Payment';
 import User from '@/models/User';
 import { verifyAuth } from '@/middleware/auth';
+import { notificationService } from '@/lib/notificationService';
 
 interface RouteParams {
   params: {
@@ -75,6 +76,27 @@ export async function PUT(
       payment.adminNotes = adminNotes;
     }
     await payment.save();
+
+    // Send notification to user
+    try {
+      await notificationService.createNotification({
+        userId: payment.userId,
+        title: '❌ Pembayaran Ditolak',
+        message: `Pembayaran untuk ${payment.packageName} (Rp ${payment.amount.toLocaleString('id-ID')}) telah ditolak. Alasan: ${rejectionReason}`,
+        type: 'system',
+        data: {
+          paymentId: payment._id,
+          packageName: payment.packageName,
+          amount: payment.amount,
+          rejectionReason: rejectionReason,
+          action: 'payment_rejected',
+        },
+      });
+      console.log(`[NOTIFICATION] Payment rejection notification sent to user ${payment.userId}`);
+    } catch (notifError) {
+      console.error('[NOTIFICATION] Failed to send rejection notification:', notifError);
+      // Don't fail the rejection if notification fails
+    }
 
     console.log(`[ADMIN] Payment rejected: ${payment._id} - Reason: ${rejectionReason}`);
 

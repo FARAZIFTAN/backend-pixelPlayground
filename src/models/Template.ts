@@ -132,7 +132,8 @@ const templateSchema = new Schema<ITemplate>(
       default: true,
     },
     createdBy: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       index: true,
     },
     visibility: {

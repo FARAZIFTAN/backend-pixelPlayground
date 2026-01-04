@@ -4,6 +4,7 @@ import Payment from '@/models/Payment';
 import User from '@/models/User';
 import UsageLimit from '@/models/UsageLimit';
 import { verifyAuth } from '@/middleware/auth';
+import { notificationService } from '@/lib/notificationService';
 
 interface RouteParams {
   params: {
@@ -88,6 +89,27 @@ export async function PUT(
     // Create or update usage limits untuk user
     const today = new Date().toISOString().split('T')[0];
     await UsageLimit.getOrCreateToday(user._id, payment.packageType);
+
+    // Send notification to user
+    try {
+      await notificationService.createNotification({
+        userId: payment.userId,
+        title: '🎉 Pembayaran Disetujui!',
+        message: `Selamat! Pembayaran untuk ${payment.packageName} (Rp ${payment.amount.toLocaleString('id-ID')}) telah disetujui. Akun Pro Anda aktif hingga ${expiryDate.toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}.`,
+        type: 'system',
+        data: {
+          paymentId: payment._id,
+          packageName: payment.packageName,
+          amount: payment.amount,
+          premiumExpiresAt: expiryDate,
+          action: 'payment_approved',
+        },
+      });
+      console.log(`[NOTIFICATION] Payment approval notification sent to user ${payment.userId}`);
+    } catch (notifError) {
+      console.error('[NOTIFICATION] Failed to send approval notification:', notifError);
+      // Don't fail the approval if notification fails
+    }
 
     console.log(`[ADMIN] Payment approved: ${payment._id} for user: ${user.email}`);
     console.log(`[ADMIN] User Pro account activated until: ${expiryDate}`);

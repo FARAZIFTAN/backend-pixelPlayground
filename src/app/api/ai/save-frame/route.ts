@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Template from '@/models/Template';
 import { verifyToken } from '@/lib/jwt';
 import { AIFrameSpecification } from '@/types/ai-frame.types';
+import mongoose from 'mongoose';
 
 // Rate limiting configuration
 const saveFrameAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     // Check for duplicate frame name by same user
     const existingTemplate = await (Template as any).findOne({
       name: sanitizedName,
-      createdBy: userId,
+      createdBy: new mongoose.Types.ObjectId(userId),
     });
 
     if (existingTemplate) {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       frameCount: frameSpec.frameCount,
       layoutPositions,
       isActive: true,
-      createdBy: userId,
+      createdBy: new mongoose.Types.ObjectId(userId),
       visibility,
       isAIGenerated: true,
       aiFrameSpec: frameSpec,
