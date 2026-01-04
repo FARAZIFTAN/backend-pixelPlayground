@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Frame Generator - Visual Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            min-height: 200px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chat-response {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        
+        .frame-preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .frame-preview img {
+            max-width: 100%;
+            height: auto;
+            border: 3px solid #ddd;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: white;
+            padding: 20px;
+        }
+        
+        .spec-display {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            overflow-x: auto;
+        }
+        
+        .spec-display pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+        }
+        
+        .info-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Frame Generator</h1>
+        <p class="subtitle">Test Interface untuk API AI Frame Generator</p>
+        
+        <div class="button-group">
+            <button onclick="testChat()">💬 Test AI Chat</button>
+            <button onclick="testGenerateFrame()">🖼️ Generate Frame (Vertical)</button>
+            <button onclick="testGenerateFrameHorizontal()">➡️ Generate Frame (Horizontal)</button>
+            <button onclick="testGenerateFrameGrid()">📊 Generate Frame (Grid)</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+
+        <div id="result" class="result-container">
+            <p style="text-align: center; color: #999;">Klik salah satu tombol di atas untuk memulai test</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+
+        function showLoading(message = 'Loading...') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function showError(title, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += `
+                <div class="error">
+                    <h3>❌ ${title}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function showSuccess(title, content) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ ${title}</h3>
+                </div>
+                ${content}
+            `;
+        }
+
+        function clearResults() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p style="text-align: center; color: #999;">Klik salah satu tombol di atas untuk memulai test</p>';
+        }
+
+        async function testChat() {
+            showLoading('Mengirim pesan ke AI...');
+
+            try {
+                const response = await fetch(`${API_URL}/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: [
+                            {
+                                role: 'user',
+                                content: 'Saya ingin frame dengan 4 foto dalam grid layout, warna pink gradient, border emas'
+                            }
+                        ]
+                    })
+                });
+
+                const data = await response.json();
+                
+                let content = `
+                    <div class="chat-response">
+                        <strong>AI Response:</strong><br><br>
+                        ${data.message}
+                    </div>
+                `;
+
+                if (data.frameSpec) {
+                    content += `
+                        <div class="spec-display">
+                            <pre>${JSON.stringify(data.frameSpec, null, 2)}</pre>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <span class="info-badge">Frame Spec Tersedia!</span>
+                            <p style="margin-top: 10px;">Frame spec sudah di-generate oleh AI. Anda bisa menggunakan spec ini untuk generate frame.</p>
+                        </div>
+                    `;
+                }
+
+                showSuccess('AI Chat Berhasil!', content);
+            } catch (error) {
+                showError('Error saat chat dengan AI', error.message);
+            }
+        }
+
+        async function generateFrame(layout, title) {
+            showLoading(`Generating ${layout} frame...`);
+
+            const configs = {
+                vertical: {
+                    frameCount: 3,
+                    layout: 'vertical',
+                    backgroundColor: '#FFD700',
+                    borderColor: '#FFA500',
+                    gradientFrom: '#FFD700',
+                    gradientTo: '#FFA500'
+                },
+                horizontal: {
+                    frameCount: 2,
+                    layout: 'horizontal',
+                    backgroundColor: '#87CEEB',
+                    borderColor: '#4682B4',
+                    gradientFrom: '#87CEEB',
+                    gradientTo: '#4682B4'
+                },
+                grid: {
+                    frameCount: 4,
+                    layout: 'grid',
+                    backgroundColor: '#FFB6C1',
+                    borderColor: '#FF69B4',
+                    gradientFrom: '#FFB6C1',
+                    gradientTo: '#FF1493'
+                }
+            };
+
+            const config = configs[layout];
+
+            try {
+                const response = await fetch(`${API_URL}/ai/generate-frame`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...config,
+                        borderThickness: 3,
+                        borderRadius: 12
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const imgSrc = `data:${data.contentType};base64,${data.image}`;
+                    
+                    const content = `
+                        <div class="grid">
+                            <div class="card">
+                                <h3>📋 Frame Configuration</h3>
+                                <p><strong>Layout:</strong> ${config.layout}</p>
+                                <p><strong>Frame Count:</strong> ${config.frameCount}</p>
+                                <p><strong>Background:</strong> ${config.backgroundColor}</p>
+                                <p><strong>Border:</strong> ${config.borderColor}</p>
+                                <p><strong>Gradient:</strong> ${config.gradientFrom} → ${config.gradientTo}</p>
+                            </div>
+                            <div class="card">
+                                <h3>ℹ️ Response Info</h3>
+                                <p><strong>Content Type:</strong> ${data.contentType}</p>
+                                <p><strong>Image Size:</strong> ${data.image.length} characters</p>
+                                <p><strong>Success:</strong> ${data.success ? '✅ Yes' : '❌ No'}</p>
+                            </div>
+                        </div>
+                        <div class="frame-preview">
+                            <h3>🎨 Generated Frame</h3>
+                            <img src="${imgSrc}" alt="Generated Frame" />
+                            <p style="margin-top: 15px; color: #666;">
+                                Frame berhasil di-generate dengan layout <strong>${config.layout}</strong>
+                            </p>
+                        </div>
+                    `;
+                    
+                    showSuccess(title, content);
+                } else {
+                    showError('Generate Frame Gagal', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showError('Error saat generate frame', error.message);
+            }
+        }
+
+        function testGenerateFrame() {
+            generateFrame('vertical', 'Frame Vertical Berhasil!');
+        }
+
+        function testGenerateFrameHorizontal() {
+            generateFrame('horizontal', 'Frame Horizontal Berhasil!');
+        }
+
+        function testGenerateFrameGrid() {
+            generateFrame('grid', 'Frame Grid Berhasil!');
+        }
+    </script>
+</body>
+</html>
