@@ -4,7 +4,11 @@ import Notification from '@/models/Notification';
 import { verifyAuth } from '@/middleware/auth';
 import { Types } from 'mongoose';
 
-export async function PATCH(request: NextRequest) {
+/**
+ * Handle mark notification as read
+ * Supports both single notification and mark all as read
+ */
+async function handleMarkRead(request: NextRequest) {
   try {
     await connectDB();
 
@@ -19,9 +23,10 @@ export async function PATCH(request: NextRequest) {
 
     const userId = authResult.userId;
     const body = await request.json();
-    const { notificationId, markAllAsRead } = body;
+    // Support both parameter names for backward compatibility
+    const { notificationId, markAllAsRead, markAll } = body;
 
-    if (markAllAsRead) {
+    if (markAllAsRead || markAll) {
       // Mark all as read for this user
       // @ts-ignore - Mongoose types can be complex
       await Notification.updateMany(
@@ -77,4 +82,13 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Support both PATCH and POST methods
+export async function PATCH(request: NextRequest) {
+  return handleMarkRead(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleMarkRead(request);
 }

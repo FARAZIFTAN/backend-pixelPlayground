@@ -1,4 +1,4 @@
-import { Schema, model, models, Document } from 'mongoose';
+import { Schema, model, models, Document, Types } from 'mongoose';
 
 export interface ILayoutPosition {
   x: number;
@@ -22,7 +22,7 @@ export interface ITemplate extends Document {
   frameCount: number;
   layoutPositions: ILayoutPosition[];
   isActive: boolean;
-  createdBy?: string;
+  createdBy?: Types.ObjectId | string;
   visibility: TemplateVisibility;
   isAIGenerated: boolean;
   aiFrameSpec?: any;
@@ -163,6 +163,8 @@ templateSchema.index({ isPremium: 1, isActive: 1 });
 templateSchema.index({ name: 'text' });
 templateSchema.index({ visibility: 1, isAIGenerated: 1 });
 templateSchema.index({ createdBy: 1, visibility: 1 });
+templateSchema.index({ createdAt: -1 }); // Index for sorting by creation date
+templateSchema.index({ isActive: 1, visibility: 1, createdAt: -1 }); // Compound index for common query
 
 const Template = models.Template || model<ITemplate>('Template', templateSchema);
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { IUserRepository, userRepository } from '@/repositories/UserRepository';
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: {
@@ -12,14 +13,26 @@ export interface AuthenticatedRequest extends NextRequest {
   };
 }
 
+export interface AuthResult {
+  user: any;
+  isValid: boolean;
+  userId: string;
+  email: string;
+  name: string;
+  role: 'user' | 'admin';
+  isPremium: boolean;
+}
+
 /**
  * Middleware to verify JWT token from Authorization header
  * Also checks if user is deleted or inactive
+ * Now supports dependency injection for better testability
  * Usage: const auth = await verifyAuth(request);
  */
 export async function verifyAuth(
-  request: NextRequest
-): Promise<{ userId: string; email: string; name: string; role: 'user' | 'admin'; isPremium: boolean } | null> {
+  request: NextRequest,
+  userRepo?: IUserRepository
+): Promise<AuthResult | null> {
   try {
     const authHeader = request.headers.get('authorization');
 
@@ -43,9 +56,12 @@ export async function verifyAuth(
       role: decoded.role
     });
 
+    // Use injected repository or default
+    const repo = userRepo || userRepository;
+    
     // Check if user still exists and is active, and get isPremium
     await connectDB();
-    const user = await (User as any).findById(decoded.userId).select('isDeleted isActive isPremium role');
+    const user = await repo.findById(decoded.userId, 'isDeleted isActive isPremium role');
     
     if (!user || user.isDeleted || !user.isActive) {
       console.log('[AUTH] User not found, deleted, or inactive');
@@ -57,6 +73,8 @@ export async function verifyAuth(
     console.log('[AUTH] Final role:', userRole, '(from DB:', user.role, ', from token:', decoded.role, ')');
 
     return {
+      user,
+      isValid: true,
       userId: decoded.userId,
       email: decoded.email,
       name: decoded.name,

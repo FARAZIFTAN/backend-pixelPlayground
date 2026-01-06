@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
+import { cloudStorageService } from '@/lib/cloudStorage';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
@@ -124,33 +125,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, ignore error
-    }
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 15);
-    const extension = path.extname(file.name) || '.png';
-    const filename = `${timestamp}-${randomId}${extension}`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Convert file to buffer and save
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 15);
+
+    // Try to upload to Cloudinary first
+    let imageUrl: string;
+    
+    const uploadResult = await cloudStorageService.uploadBuffer(buffer, {
+      folder: 'pixelplayground/photos',
+      publicId: `photo-${authUser.userId}-${timestamp}-${randomId}`,
+      resourceType: 'image',
+    });
+
+    if (uploadResult.success && uploadResult.secure_url) {
+      imageUrl = uploadResult.secure_url;
+      console.log('✅ Photo uploaded to Cloudinary:', imageUrl);
+    } else {
+      // Fallback to local storage if Cloudinary fails
+      console.warn('⚠️ Cloudinary upload failed, using local storage fallback');
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
+      try {
+        await mkdir(uploadsDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist, ignore error
+      }
+
+      const extension = path.extname(file.name) || '.png';
+      const filename = `${timestamp}-${randomId}${extension}`;
+      const filepath = path.join(uploadsDir, filename);
+      await writeFile(filepath, buffer);
+      imageUrl = `/uploads/photos/${filename}`;
+      console.log('✅ Photo saved to local storage:', imageUrl);
+    }
 
     // Create photo record in database
     const photo = new (Photo as any)({
       userId: authUser.userId,
       title: title.trim(),
       description: description ? description.trim() : undefined,
-      imageUrl: `/uploads/photos/${filename}`,
-      thumbnailUrl: `/uploads/photos/${filename}`, // For now, use same image as thumbnail
+      imageUrl: imageUrl,
+      thumbnailUrl: imageUrl, // For now, use same image as thumbnail
       isPublic: isPublic !== undefined ? isPublic : true,
       templateId: templateId || undefined,
       views: 0,

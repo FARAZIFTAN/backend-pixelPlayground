@@ -5,6 +5,7 @@ import { verifyToken } from '@/lib/jwt';
 import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import PhotoSession from '@/models/PhotoSession';
+import { cloudStorageService } from '@/lib/cloudStorage';
 
 // Next.js 14 App Router - Route Segment Config
 export const runtime = 'nodejs';
@@ -71,23 +72,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save file to uploads/composites/
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'composites');
-    await mkdir(uploadDir, { recursive: true });
-
-    const timestamp = Date.now();
-    const filename = `composite-${decoded.userId}-${timestamp}.png`;
-    const filepath = join(uploadDir, filename);
-
-    // Convert File to Buffer and save
+    // Convert File to Buffer
     const bytes = await imageFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
+    const timestamp = Date.now();
 
-    console.log('✅ Composite image saved:', filename);
+    // Try to upload to Cloudinary first
+    let compositeUrl: string;
+    
+    const uploadResult = await cloudStorageService.uploadBuffer(buffer, {
+      folder: 'pixelplayground/composites',
+      publicId: `composite-${decoded.userId}-${timestamp}`,
+      resourceType: 'image',
+    });
 
-    // Create composite URL (relative path)
-    const compositeUrl = `/uploads/composites/${filename}`;
+    if (uploadResult.success && uploadResult.secure_url) {
+      compositeUrl = uploadResult.secure_url;
+      console.log('✅ Composite uploaded to Cloudinary:', compositeUrl);
+    } else {
+      // Fallback to local storage if Cloudinary fails
+      console.warn('⚠️ Cloudinary upload failed, using local storage fallback');
+      const uploadDir = join(process.cwd(), 'public', 'uploads', 'composites');
+      await mkdir(uploadDir, { recursive: true });
+
+      const filename = `composite-${decoded.userId}-${timestamp}.png`;
+      const filepath = join(uploadDir, filename);
+      await writeFile(filepath, buffer);
+
+      compositeUrl = `/uploads/composites/${filename}`;
+      console.log('✅ Composite saved to local storage:', compositeUrl);
+    }
 
     // Save to database
     const composite = await FinalComposite.create({

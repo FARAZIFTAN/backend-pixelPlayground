@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { verifyAuth, unauthorizedResponse } from '@/middleware/auth';
+import { cloudStorageService } from '@/lib/cloudStorage';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -65,16 +66,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'profiles');
-    try {
-      await fs.access(uploadsDir);
-    } catch {
-      await fs.mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Delete old profile picture if exists
-    if (user.profilePicture) {
+    // Delete old profile picture if exists (only for local storage)
+    if (user.profilePicture && user.profilePicture.startsWith('/uploads/')) {
       const oldPicturePath = path.join(process.cwd(), 'public', user.profilePicture);
       try {
         await fs.access(oldPicturePath);
@@ -85,19 +78,43 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileExtension = file.name.split('.').pop();
-    const filename = `profile-${authUser.userId}-${timestamp}.${fileExtension}`;
-    const filepath = path.join(uploadsDir, filename);
-
-    // Save file
+    // Convert file to buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await fs.writeFile(filepath, buffer);
+    const timestamp = Date.now();
+
+    // Try to upload to Cloudinary first
+    let profilePictureUrl: string;
+    
+    const uploadResult = await cloudStorageService.uploadBuffer(buffer, {
+      folder: 'pixelplayground/profiles',
+      publicId: `profile-${authUser.userId}-${timestamp}`,
+      resourceType: 'image',
+      transformation: { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+    });
+
+    if (uploadResult.success && uploadResult.secure_url) {
+      profilePictureUrl = uploadResult.secure_url;
+      console.log('✅ Profile picture uploaded to Cloudinary:', profilePictureUrl);
+    } else {
+      // Fallback to local storage if Cloudinary fails
+      console.warn('⚠️ Cloudinary upload failed, using local storage fallback');
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'profiles');
+      try {
+        await fs.access(uploadsDir);
+      } catch {
+        await fs.mkdir(uploadsDir, { recursive: true });
+      }
+
+      const fileExtension = file.name.split('.').pop();
+      const filename = `profile-${authUser.userId}-${timestamp}.${fileExtension}`;
+      const filepath = path.join(uploadsDir, filename);
+      await fs.writeFile(filepath, buffer);
+      profilePictureUrl = `/uploads/profiles/${filename}`;
+      console.log('✅ Profile picture saved to local storage:', profilePictureUrl);
+    }
 
     // Update user profile picture path
-    const profilePictureUrl = `/uploads/profiles/${filename}`;
     user.profilePicture = profilePictureUrl;
     await user.save();
 

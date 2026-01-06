@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { notificationService } from '@/lib/notificationService';
+import { emailService } from '@/lib/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -103,13 +104,18 @@ export async function POST(request: NextRequest) {
       // Don't fail registration if notification fails
     }
 
-    // TODO: Send verification email
-    // In production, send email with verification link:
-    // const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    // await sendEmail(user.email, 'Verify Your Email', verificationUrl);
+    // Send verification email using real email service
+    try {
+      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/verify-email?token=${verificationToken}`;
+      await emailService.sendVerificationEmail(user.email, user.name, verificationUrl);
+      console.log('[REGISTER] Verification email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError);
+      // Don't fail registration if email fails
+    }
 
     console.log('Email Verification Token:', verificationToken);
-    console.log('User should verify email at: /api/auth/verify-email?token=' + verificationToken);
+    console.log('User should verify email at: /verify-email?token=' + verificationToken);
 
     // Return success response (without password)
     return NextResponse.json(

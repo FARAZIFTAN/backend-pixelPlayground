@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import CapturedPhoto from '@/models/CapturedPhoto';
 import PhotoSession from '@/models/PhotoSession';
 import { verifyToken } from '@/lib/jwt';
+import { cloudStorageService } from '@/lib/cloudStorage';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -54,38 +55,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process photoUrl - if it's base64, save to filesystem
+    // Process photoUrl - if it's base64, upload to Cloudinary
     let finalPhotoUrl = photoUrl;
     let finalThumbnailUrl = thumbnailUrl;
 
     if (photoUrl.startsWith('data:image/')) {
       try {
-        // Extract base64 data
-        const matches = photoUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-        if (matches) {
-          const imageType = matches[1];
-          const base64Data = matches[2];
-          
-          // Create uploads directory if it doesn't exist
-          const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
-          try {
-            await fs.access(uploadsDir);
-          } catch {
-            await fs.mkdir(uploadsDir, { recursive: true });
+        // Try to upload to Cloudinary first
+        const uploadResult = await cloudStorageService.uploadBase64(photoUrl, {
+          folder: 'pixelplayground/photos',
+          publicId: `photo-${decoded.userId}-${Date.now()}`,
+        });
+
+        if (uploadResult.success && uploadResult.secure_url) {
+          finalPhotoUrl = uploadResult.secure_url;
+          console.log('✅ Photo uploaded to Cloudinary:', finalPhotoUrl);
+        } else {
+          // Fallback to local storage if Cloudinary fails
+          console.warn('⚠️ Cloudinary upload failed, using local storage fallback');
+          const matches = photoUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (matches) {
+            const imageType = matches[1];
+            const base64Data = matches[2];
+            
+            const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
+            try {
+              await fs.access(uploadsDir);
+            } catch {
+              await fs.mkdir(uploadsDir, { recursive: true });
+            }
+
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(7);
+            const filename = `photo-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
+            const filepath = path.join(uploadsDir, filename);
+
+            const buffer = Buffer.from(base64Data, 'base64');
+            await fs.writeFile(filepath, buffer);
+
+            finalPhotoUrl = `/uploads/photos/${filename}`;
           }
-
-          // Generate unique filename
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(7);
-          const filename = `photo-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
-          const filepath = path.join(uploadsDir, filename);
-
-          // Save file
-          const buffer = Buffer.from(base64Data, 'base64');
-          await fs.writeFile(filepath, buffer);
-
-          // Update URL to filesystem path
-          finalPhotoUrl = `/uploads/photos/${filename}`;
         }
       } catch (error) {
         console.error('Error saving base64 image:', error);
@@ -99,27 +108,40 @@ export async function POST(request: NextRequest) {
     // Process thumbnailUrl if it's base64
     if (thumbnailUrl && thumbnailUrl.startsWith('data:image/')) {
       try {
-        const matches = thumbnailUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-        if (matches) {
-          const imageType = matches[1];
-          const base64Data = matches[2];
-          
-          const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
-          try {
-            await fs.access(uploadsDir);
-          } catch {
-            await fs.mkdir(uploadsDir, { recursive: true });
+        // Try to upload thumbnail to Cloudinary
+        const thumbResult = await cloudStorageService.uploadBase64(thumbnailUrl, {
+          folder: 'pixelplayground/thumbnails',
+          publicId: `thumb-${decoded.userId}-${Date.now()}`,
+          transformation: { width: 200, height: 200, crop: 'fill' },
+        });
+
+        if (thumbResult.success && thumbResult.secure_url) {
+          finalThumbnailUrl = thumbResult.secure_url;
+          console.log('✅ Thumbnail uploaded to Cloudinary:', finalThumbnailUrl);
+        } else {
+          // Fallback to local storage
+          const matches = thumbnailUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (matches) {
+            const imageType = matches[1];
+            const base64Data = matches[2];
+            
+            const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'photos');
+            try {
+              await fs.access(uploadsDir);
+            } catch {
+              await fs.mkdir(uploadsDir, { recursive: true });
+            }
+
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(7);
+            const filename = `thumb-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
+            const filepath = path.join(uploadsDir, filename);
+
+            const buffer = Buffer.from(base64Data, 'base64');
+            await fs.writeFile(filepath, buffer);
+
+            finalThumbnailUrl = `/uploads/photos/${filename}`;
           }
-
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(7);
-          const filename = `thumb-${decoded.userId}-${timestamp}-${randomStr}.${imageType}`;
-          const filepath = path.join(uploadsDir, filename);
-
-          const buffer = Buffer.from(base64Data, 'base64');
-          await fs.writeFile(filepath, buffer);
-
-          finalThumbnailUrl = `/uploads/photos/${filename}`;
         }
       } catch (error) {
         console.error('Error saving thumbnail:', error);

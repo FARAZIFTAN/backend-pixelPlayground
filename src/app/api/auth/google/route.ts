@@ -97,7 +97,6 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     // Check if user exists by googleId or email
-    // @ts-expect-error - Mongoose type inference issue with union types
     let user = await User.findOne({
       $or: [{ googleId }, { email }],
     }).exec();
@@ -117,7 +116,6 @@ export async function POST(request: NextRequest) {
       console.log('✅ Google login successful:', email);
     } else {
       // Create new user with Google account
-      // @ts-expect-error - Mongoose type inference issue with union types
       const newUser = await User.create({
         name,
         email,
@@ -130,7 +128,6 @@ export async function POST(request: NextRequest) {
       });
 
       // Re-fetch to get full user document
-      // @ts-expect-error - Mongoose type inference issue with union types
       user = await User.findById(newUser._id).exec();
 
       console.log('✅ New Google user created:', email);

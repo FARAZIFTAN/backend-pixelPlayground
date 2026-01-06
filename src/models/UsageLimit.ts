@@ -27,7 +27,7 @@ export interface IUsageLimit extends Document {
 // Model interface untuk static methods
 export interface IUsageLimitModel extends Model<IUsageLimit> {
   getOrCreateToday(
-    userId: Schema.Types.ObjectId,
+    userId: Schema.Types.ObjectId | string,
     packageType?: 'free' | 'pro'
   ): Promise<IUsageLimit>;
 }

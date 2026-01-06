@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
+import { emailService } from '@/lib/emailService';
 
 // POST /api/auth/forgot-password - Request password reset
 export async function POST(request: NextRequest) {
@@ -38,13 +39,18 @@ export async function POST(request: NextRequest) {
     const resetToken = user.generateResetPasswordToken();
     await user.save({ validateBeforeSave: false });
 
-    // TODO: Send reset password email
-    // In production, send email with reset link:
-    // const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    // await sendEmail(user.email, 'Reset Your Password', resetUrl);
+    // Send reset password email using real email service
+    try {
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:8080'}/reset-password?token=${resetToken}`;
+      await emailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
+      console.log('[FORGOT-PASSWORD] Reset email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Error sending reset email:', emailError);
+      // Continue even if email fails
+    }
 
     console.log('Password Reset Token:', resetToken);
-    console.log('User should reset password at: /api/auth/reset-password');
+    console.log('User should reset password at: /reset-password?token=' + resetToken);
 
     return NextResponse.json(
       {

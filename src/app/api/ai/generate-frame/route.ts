@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user details to check premium status
-    const userDoc = await User.findById(user.userId);
+    const userDoc = await User.findById(user.userId).exec();
     if (!userDoc) {
       return NextResponse.json(
         {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           details: error.message,
           packageType,
           upgradeUrl: '/upgrade-pro'
-        } as GenerateFrameResponse,
+        },
         { status: 429 } // Too Many Requests
       );
     }

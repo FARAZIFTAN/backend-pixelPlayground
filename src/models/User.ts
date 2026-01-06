@@ -1,4 +1,4 @@
-import { Schema, model, models, Document } from 'mongoose';
+import { Schema, model, models, Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
@@ -234,6 +234,6 @@ userSchema.methods.generateResetPasswordToken = function (): string {
   return token;
 };
 
-const User = models.User || model<IUser>('User', userSchema);
+const User: Model<IUser> = models.User || model<IUser>('User', userSchema);
 
 export default User;

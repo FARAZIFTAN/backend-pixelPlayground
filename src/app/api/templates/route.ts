@@ -81,21 +81,33 @@ export async function GET(request: NextRequest) {
     const finalQuery = query.$and.length === 0 ? {} : 
                       query.$and.length === 1 ? query.$and[0] : query;
 
-    // Fetch templates - exclude large frameUrl for list view, only include thumbnail
-    const templates = await (Template as any)
-      .find(finalQuery)
-      .select('-frameUrl') // Exclude large base64 frameUrl from list
-      .populate({
-        path: 'createdBy',
-        select: 'name email',
-        strictPopulate: false // Allow populate even if some refs are invalid
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    console.time('⏱️ Template query execution');
 
-    // Transform templates to include creatorName
+    // Fetch templates and count in parallel for better performance
+    const [templates, total] = await Promise.all([
+      (Template as any)
+        .find(finalQuery)
+        .select('-frameUrl -aiFrameSpec') // Exclude large base64 frameUrl and aiFrameSpec from list
+        .populate({
+          path: 'createdBy',
+          select: 'name email', // Only select name and email, nothing else
+          strictPopulate: false, // Don't fail if ref is invalid
+          options: { lean: true } // Lean populate for better performance
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean({ virtuals: false, getters: false }) // Optimize lean for faster queries
+        .maxTimeMS(25000) // 25 second query timeout
+        .exec(),
+      
+      // Count in parallel
+      (Template as any).countDocuments(finalQuery).maxTimeMS(5000)
+    ]);
+
+    console.timeEnd('⏱️ Template query execution');
+
+    // Transform templates to include creatorName from populated user
     const transformedTemplates = templates.map((template: any) => {
       let creatorName = 'Anonymous';
       
@@ -105,9 +117,8 @@ export async function GET(request: NextRequest) {
                      template.createdBy.email?.split('@')[0] || 
                      'Community Creator';
       }
-      // If createdBy is still a string (legacy data), try to use it
+      // If createdBy is still a string (user ID only), use default
       else if (template.createdBy && typeof template.createdBy === 'string') {
-        // It's a user ID string, keep it but can't get name
         creatorName = 'Community Creator';
       }
 
@@ -117,9 +128,6 @@ export async function GET(request: NextRequest) {
         createdBy: template.createdBy?._id || template.createdBy, // Keep the ID
       };
     });
-
-    // Get total count
-    const total = await (Template as any).countDocuments(finalQuery);
 
     return NextResponse.json(
       {

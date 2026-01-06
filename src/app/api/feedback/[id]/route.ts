@@ -1,17 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Feedback from '@/models/Feedback';
+import User from '@/models/User';
+import { verifyAuth } from '@/middleware/auth';
 import { Types } from 'mongoose';
+
+// Helper to verify admin
+async function verifyAdmin(req: NextRequest) {
+  const authUser = await verifyAuth(req);
+  if (!authUser) return null;
+  
+  const user = await (User as any).findById(authUser.userId);
+  if (!user || user.role !== 'admin') return null;
+  
+  return authUser;
+}
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
+    // Verify admin access
+    const authUser = await verifyAdmin(req);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, message: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
     const { status } = await req.json();
-    const feedbackId = params.id;
+    const { id: feedbackId } = await params;
 
     if (!Types.ObjectId.isValid(feedbackId)) {
       return NextResponse.json(
@@ -55,12 +77,21 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const feedbackId = params.id;
+    // Verify admin access
+    const authUser = await verifyAdmin(req);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, message: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { id: feedbackId } = await params;
 
     if (!Types.ObjectId.isValid(feedbackId)) {
       return NextResponse.json(

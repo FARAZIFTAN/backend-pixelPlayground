@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Feedback from '@/models/Feedback';
+import { verifyAuth } from '@/middleware/auth';
+import User from '@/models/User';
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,6 +48,24 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
+
+    // Verify admin access
+    const authUser = await verifyAuth(req);
+    if (!authUser) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is admin
+    const user = await (User as any).findById(authUser.userId);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Admin access required' },
+        { status: 403 }
+      );
+    }
 
     // Get all feedback
     const feedbacks = await (Feedback as any).find().sort({ createdAt: -1 }).lean();
