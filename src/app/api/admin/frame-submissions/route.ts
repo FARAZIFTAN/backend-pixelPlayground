@@ -5,6 +5,10 @@ import Template from '@/models/Template';
 import { verifyAuth } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
 
+// Force these app routes to run as dynamic server functions to allow
+// reading request headers (authorization) and dynamic behavior during export
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/frame-submissions
  * Get pending frame submissions (admin only)

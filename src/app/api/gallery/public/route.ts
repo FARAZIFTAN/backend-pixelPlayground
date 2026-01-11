@@ -3,6 +3,9 @@ import dbConnect from '@/lib/mongodb';
 import Photo from '@/models/Photo';
 import { verifyToken } from '@/lib/jwt';
 
+// Public gallery route may use request URL/headers; force dynamic
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/gallery/public
  * Browse all public photos (Explore/Discovery page)

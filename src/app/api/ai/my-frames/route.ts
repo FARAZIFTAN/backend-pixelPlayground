@@ -4,6 +4,9 @@ import Template from '@/models/Template';
 import { verifyToken } from '@/lib/jwt';
 import mongoose from 'mongoose';
 
+// This route needs to read request headers (auth token) so force dynamic
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/ai/my-frames
  * Mengambil semua AI-generated frames milik user yang sedang login

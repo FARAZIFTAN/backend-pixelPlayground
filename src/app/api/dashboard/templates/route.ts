@@ -3,6 +3,9 @@ import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import { verifyAdmin } from '@/middleware/admin';
 
+// This route uses request headers for admin verification — force dynamic
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();

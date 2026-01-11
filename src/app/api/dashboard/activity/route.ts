@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import FinalComposite from '@/models/FinalComposite';
 import User from '@/models/User';
+
 import { verifyAdmin } from '@/middleware/admin';
+
+// Force dynamic because this route checks request headers for auth
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {

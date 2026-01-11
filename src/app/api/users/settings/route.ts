@@ -3,6 +3,9 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { verifyToken } from '@/lib/jwt';
 
+// This route reads request.headers for the auth token — force dynamic
+export const dynamic = 'force-dynamic';
+
 // GET /api/users/settings - Get user settings
 export async function GET(request: NextRequest) {
   try {

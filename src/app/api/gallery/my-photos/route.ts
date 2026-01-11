@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/mongodb';
-import Photo from '@/models/Photo';
+import Photo from '@/models/Photo'
+
+// My-photos route reads authorization header — force dynamic runtime
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/gallery/my-photos

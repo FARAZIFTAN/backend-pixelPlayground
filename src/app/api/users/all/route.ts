@@ -3,6 +3,9 @@ import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { verifyAdmin } from '@/middleware/admin';
 
+// Requires admin token from request headers — force dynamic
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();

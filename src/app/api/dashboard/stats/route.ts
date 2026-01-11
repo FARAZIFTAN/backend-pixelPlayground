@@ -4,6 +4,9 @@ import User from '@/models/User';
 import FinalComposite from '@/models/FinalComposite';
 import { verifyAdmin } from '@/middleware/admin';
 
+// Force dynamic rendering because we rely on request headers for auth
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();

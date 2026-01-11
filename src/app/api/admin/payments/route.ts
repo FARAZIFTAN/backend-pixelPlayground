@@ -5,6 +5,9 @@ import User from '@/models/User';
 import UsageLimit from '@/models/UsageLimit';
 import { verifyAuth } from '@/middleware/auth';
 
+// Ensure this API route runs dynamically (allows reading request headers)
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/payments
  * Get all payments (admin only)
