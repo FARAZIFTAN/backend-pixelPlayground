@@ -1,26 +1,30 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// List of allowed origins - prefer environment variable, fallback to frontend URL
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : [
-      FRONTEND_URL,
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:5174',
-    ];
+// 1. HARDCODE DOMAIN ASLI (Supaya aman dari Env Var yang salah)
+const PRODUCTION_URL = 'https://karyaklik.netlify.app';
+
+// 2. Buat daftar whitelist yang pasti benar
+const allowedOrigins = [
+  PRODUCTION_URL,                // Wajib ada
+  'http://localhost:5173',       // Local Vite
+  'http://localhost:3000',       // Local Next
+  process.env.FRONTEND_URL       // Opsional (jika ada di Env Var)
+].filter(Boolean) as string[];   // Hapus value null/undefined
 
 // CORS headers configuration
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  // Check if origin is allowed
+  // Cek apakah origin yang meminta ada di daftar whitelist
+  // Jika origin ada di daftar, kita izinkan.
   const isAllowed = origin && allowedOrigins.includes(origin);
+  
+  // Jika diizinkan pakai origin request, JIKA TIDAK pakai Production URL (Netlify)
+  // Jangan pernah fallback ke Env Var lagi karena itu sumber masalahnya
+  const allowOrigin = isAllowed ? origin : PRODUCTION_URL;
   
   return {
     'Access-Control-Allow-Credentials': 'true',
-    // If origin is not allowed, fallback to configured FRONTEND_URL
-    'Access-Control-Allow-Origin': isAllowed ? origin : FRONTEND_URL,
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET,DELETE,PATCH,POST,PUT,OPTIONS',
     'Access-Control-Allow-Headers': 
       'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, ' +
@@ -34,7 +38,7 @@ export function middleware(request: NextRequest) {
   const origin = request.headers.get('origin');
   const pathname = request.nextUrl.pathname;
 
-  // Handle OPTIONS preflight request
+  // Handle OPTIONS preflight request (PENTING UNTUK LOGIN)
   if (request.method === 'OPTIONS') {
     const corsHeaders = getCorsHeaders(origin);
     return new NextResponse(null, {
