@@ -4,18 +4,25 @@ import { NextResponse } from 'next/server';
  * Get allowed origins from environment or defaults
  */
 export function getAllowedOrigins(): string[] {
-  if (process.env.ALLOWED_ORIGINS) {
-    return process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
-  }
-  
-  // Default allowed origins for development
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
-  return [
-    FRONTEND_URL,
-    'http://localhost:5173',  // Vite alternative port
-    'http://localhost:3000',  // Next.js dev
-    'http://localhost:5174',  // Vite alternative port 2
+  // 1. Daftar Wajib (Hardcoded agar pasti jalan di Production)
+  const origins = [
+    'https://karyaklik.netlify.app',  // <--- PASTI ADA, TIDAK BISA DITIMPA
+    'http://localhost:5173',          // Vite local
+    'http://localhost:3000',          // Next local
   ];
+
+  // 2. Tambahan dari Environment Variable (Opsional)
+  if (process.env.FRONTEND_URL) {
+    origins.push(process.env.FRONTEND_URL);
+  }
+
+  if (process.env.ALLOWED_ORIGINS) {
+    const extraOrigins = process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    origins.push(...extraOrigins);
+  }
+
+  // Hapus duplikat (opsional tapi bagus)
+  return [...new Set(origins)];
 }
 
 /**
@@ -23,12 +30,16 @@ export function getAllowedOrigins(): string[] {
  */
 export function getCorsHeaders(origin?: string | null): Record<string, string> {
   const allowedOrigins = getAllowedOrigins();
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
-  const requestOrigin = origin || FRONTEND_URL;
+  
+  // Default fallback jika origin tidak dikenali (PENTING: Default ke Netlify, BUKAN ke Env Var)
+  const defaultOrigin = 'https://karyaklik.netlify.app'; 
+  const requestOrigin = origin || defaultOrigin;
 
-  // Check if origin is allowed
+  // Cek apakah origin yang meminta ada di daftar whitelist
   const isAllowed = allowedOrigins.includes(requestOrigin) || allowedOrigins.includes('*');
-  const allowOrigin = isAllowed ? requestOrigin : FRONTEND_URL;
+  
+  // Jika diizinkan pakai origin request, jika tidak pakai default Netlify
+  const allowOrigin = isAllowed ? requestOrigin : defaultOrigin;
   
   return {
     'Access-Control-Allow-Credentials': 'true',
