@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Backend API for PixelPlayground - Authentication & User Management",
   "scripts": {
-    "dev": "next dev -p 3001",
+    "dev": "next dev",
     "dev:socket": "ts-node --project tsconfig.json server.ts",
     "build": "next build",
-    "start": "ts-node --transpile-only server.ts",
+    "start": "next start",
     "start:next": "next start -p 3001",
     "start:socket": "ts-node server.ts",
     "lint": "next lint",
