@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update session
-    session.finalComposite = composite._id.toString();
+    session.finalComposite = (composite._id as any).toString();
     session.status = 'completed';
     session.completedAt = new Date();
     await session.save();

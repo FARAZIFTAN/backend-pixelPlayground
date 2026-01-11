@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const activities = [];
+    const activities: Array<{action: string, detail: string, time: string, type: string}> = [];
 
     // Get recent composite creations
     // @ts-ignore - Mongoose types can be complex

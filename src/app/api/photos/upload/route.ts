@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update session
-    session.capturedPhotos.push(photo._id.toString());
+    session.capturedPhotos.push((photo as any)._id.toString());
     if (session.metadata) {
       session.metadata.totalPhotos = session.capturedPhotos.length;
     }

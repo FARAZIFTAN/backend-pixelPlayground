@@ -47,7 +47,7 @@ Sentry.init({
       }
 
       // Remove sensitive query parameters
-      if (event.request.query_string) {
+      if (event.request && event.request.query_string) {
         if (typeof event.request.query_string === 'string') {
           event.request.query_string = event.request.query_string
             .replace(/password=[^&]*/gi, 'password=[FILTERED]')
@@ -60,9 +60,9 @@ Sentry.init({
             return [key, value];
           }) as [string, string][];
         } else {
-          Object.keys(event.request.query_string).forEach(key => {
+          Object.keys(event.request!.query_string).forEach(key => {
             if (key === 'password' || key === 'token') {
-              event.request.query_string[key] = '[FILTERED]';
+              (event.request!.query_string as any)[key] = '[FILTERED]';
             }
           });
         }

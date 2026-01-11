@@ -49,7 +49,7 @@ const templates: Partial<ITemplate>[] = [
 async function seedTemplates() {
   try {
     console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI!);
     console.log('✅ Connected to MongoDB');
 
     // Check if templates already exist

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Verify authentication
     const authResult = await verifyAuth(request);
-    if (!authResult.isValid || !authResult.user) {
+    if (!authResult || !authResult.isValid || !authResult.user) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
         { status: 401 }

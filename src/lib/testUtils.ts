@@ -148,7 +148,7 @@ export class MockUserRepository implements IUserRepository {
   private users: Map<string, IUser> = new Map();
 
   constructor(initialUsers: IUser[] = []) {
-    initialUsers.forEach(user => this.users.set(user._id.toString(), user));
+    initialUsers.forEach(user => this.users.set((user._id as string).toString(), user));
   }
 
   async findById(id: string, select?: string): Promise<IUser | null> {
@@ -159,7 +159,7 @@ export class MockUserRepository implements IUserRepository {
     const users = Array.from(this.users.values());
     return users.find(u => {
       if (filter.email) return u.email === filter.email;
-      if (filter._id) return u._id.toString() === filter._id.toString();
+      if (filter._id) return (u._id as any).toString() === filter._id.toString();
       return false;
     }) || null;
   }
@@ -173,7 +173,7 @@ export class MockUserRepository implements IUserRepository {
       _id: `user_${Date.now()}`,
       ...userData,
     } as IUser;
-    this.users.set(user._id.toString(), user);
+    this.users.set((user._id as string).toString(), user);
     return user;
   }
 
@@ -218,7 +218,7 @@ export class MockPaymentRepository implements IPaymentRepository {
   private payments: Map<string, IPayment> = new Map();
 
   constructor(initialPayments: IPayment[] = []) {
-    initialPayments.forEach(payment => this.payments.set(payment._id.toString(), payment));
+    initialPayments.forEach(payment => this.payments.set((payment._id as string).toString(), payment));
   }
 
   async findById(id: string): Promise<IPayment | null> {
@@ -228,7 +228,7 @@ export class MockPaymentRepository implements IPaymentRepository {
   async findOne(filter: FilterQuery<IPayment>): Promise<IPayment | null> {
     const payments = Array.from(this.payments.values());
     return payments.find(p => {
-      if (filter._id) return p._id.toString() === filter._id.toString();
+      if (filter._id) return (p._id as any).toString() === filter._id.toString();
       if (filter.userId) return p.userId.toString() === filter.userId.toString();
       return false;
     }) || null;
@@ -251,7 +251,7 @@ export class MockPaymentRepository implements IPaymentRepository {
       _id: `payment_${Date.now()}`,
       ...paymentData,
     } as IPayment;
-    this.payments.set(payment._id.toString(), payment);
+    this.payments.set((payment._id as string).toString(), payment);
     return payment;
   }
 

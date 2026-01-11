@@ -21,7 +21,7 @@ export async function POST(
     if (token) {
       try {
         const decoded = verifyToken(token);
-        userId = decoded.userId;
+        if (decoded) userId = decoded.userId;
       } catch {
         // Continue without userId if token invalid
       }

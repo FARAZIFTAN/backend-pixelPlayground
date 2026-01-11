@@ -23,6 +23,12 @@ export async function PATCH(
     }
 
     const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid token' },
+        { status: 401 }
+      );
+    }
     const userId = decoded.userId;
 
     // Find photo and verify ownership
@@ -83,6 +89,16 @@ export async function PUT(
     }
 
     const decoded = verifyToken(token);
+
+    // 1. Cek jika decoded kosong (token palsu/expired)
+    if (!decoded) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // 2. Jika lolos, baru aman ambil userId
     const userId = decoded.userId;
 
     const body = await req.json();

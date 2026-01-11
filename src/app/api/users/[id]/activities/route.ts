@@ -6,6 +6,15 @@ import FinalComposite from '@/models/FinalComposite';
 import User from '@/models/User';
 import { verifyAdmin } from '@/middleware/admin';
 
+interface Activity {
+  type: string;
+  action: string;
+  description: string;
+  timestamp: any;
+  metadata: any;
+  category?: string;
+}
+
 // GET /api/users/:id/activities - Get user activities
 export async function GET(
   request: NextRequest,
@@ -39,7 +48,7 @@ export async function GET(
     }
 
     // Combine activities from multiple sources
-    const activities = [];
+    const activities: Activity[] = [];
 
     // Get analytics events
     // @ts-ignore
@@ -50,7 +59,7 @@ export async function GET(
       .exec();
 
     events.forEach((event: any) => {
-      activities.push({
+      return activities.push({
         type: 'event',
         action: event.eventType,
         category: event.eventCategory,
@@ -91,7 +100,7 @@ export async function GET(
       .exec();
 
     composites.forEach((composite: any) => {
-      activities.push({
+      return activities.push({
         type: 'composite',
         action: 'created_composite',
         description: `Created composite with ${composite.templateId || 'custom'} template`,

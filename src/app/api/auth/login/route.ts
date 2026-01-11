@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email (include password field), only if not deleted
     // @ts-ignore - Mongoose types can be complex
-    const user = await User.findOne({ email: email.toLowerCase(), isDeleted: false }).select('+password +loginHistory');
+    const user: IUser = await User.findOne({ email: email.toLowerCase(), isDeleted: false }).select('+password +loginHistory');
     
     console.log('[LOGIN] User found:', user ? 'Yes' : 'No');
     
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     // Generate JWT token
     console.log('[LOGIN] Generating token...');
     const token = generateToken({
-      userId: user._id.toString(),
+      userId: (user._id as any).toString(),
       email: user.email,
       name: user.name,
       role: user.role || 'user',

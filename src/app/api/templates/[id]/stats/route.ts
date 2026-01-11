@@ -114,13 +114,13 @@ export async function GET(
       success: true,
       data: {
         template: {
-          id: template._id,
-          name: template.name,
-          category: template.category,
-          thumbnail: template.thumbnail,
-          isActive: template.isActive,
-          isPremium: template.isPremium,
-          createdAt: template.createdAt,
+          id: (template as any)._id,
+          name: (template as any).name,
+          category: (template as any).category,
+          thumbnail: (template as any).thumbnail,
+          isActive: (template as any).isActive,
+          isPremium: (template as any).isPremium,
+          createdAt: (template as any).createdAt,
         },
         statistics: {
           totalUsage,

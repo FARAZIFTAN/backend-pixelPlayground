@@ -20,6 +20,12 @@ export async function GET(req: NextRequest) {
     }
 
     const decoded = verifyToken(token);
+    if (!decoded) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid token' },
+        { status: 401 }
+      );
+    }
     const userId = decoded.userId;
 
     // Query parameters

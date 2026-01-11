@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
  */
 function generateLayoutPositions(frameSpec: AIFrameSpecification): any[] {
   const { layout, frameCount } = frameSpec;
-  const positions = [];
+  const positions: Array<{x: number, y: number, width: number, height: number}> = [];
   
   // AI Frame standard dimensions
   const frameWidth = 600;

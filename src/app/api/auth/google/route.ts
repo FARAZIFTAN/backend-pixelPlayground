@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     // Check if user exists by googleId or email
-    let user = await User.findOne({
+    let user: IUser | null = await User.findOne({
       $or: [{ googleId }, { email }],
     }).exec();
 
@@ -128,14 +128,14 @@ export async function POST(request: NextRequest) {
       });
 
       // Re-fetch to get full user document
-      user = await User.findById(newUser._id).exec();
+      user = await User.findById(newUser._id).exec() as IUser | null;
 
       console.log('✅ New Google user created:', email);
     }
 
     // Generate JWT token
     const jwtToken = generateToken({
-      userId: user!._id.toString(),
+      userId: (user!._id as any).toString(),
       email: user!.email,
       name: user!.name,
       role: user!.role,
@@ -147,12 +147,12 @@ export async function POST(request: NextRequest) {
         message: 'Google authentication successful',
         token: jwtToken,
         user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          profilePicture: user.profilePicture,
-          isEmailVerified: user.isEmailVerified,
+          id: (user!._id as any).toString(),
+          name: user!.name,
+          email: user!.email,
+          role: user!.role,
+          profilePicture: user!.profilePicture,
+          isEmailVerified: user!.isEmailVerified,
         },
       },
       { status: 200 }
