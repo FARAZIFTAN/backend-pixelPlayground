@@ -19,7 +19,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   
   return {
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
+    // If origin is not allowed, fallback to configured FRONTEND_URL
+    'Access-Control-Allow-Origin': isAllowed ? origin : FRONTEND_URL,
     'Access-Control-Allow-Methods': 'GET,DELETE,PATCH,POST,PUT,OPTIONS',
     'Access-Control-Allow-Headers': 
       'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, ' +
