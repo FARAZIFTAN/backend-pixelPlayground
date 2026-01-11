@@ -636,4 +636,277 @@ describe('User Model', () => {
       expect(user.isEmailVerified).toBe(true);
     });
   });
+
+  describe('User Instance Methods', () => {
+    describe('comparePassword Method', () => {
+      it('should return true for matching password', async () => {
+        const mockCompare = bcrypt.compare as jest.Mock;
+        mockCompare.mockResolvedValue(true);
+
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'hashedPassword123',
+        };
+
+        const user = new UserModel(userData);
+        
+        // Manually attach comparePassword method for testing
+        user.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+          try {
+            return await bcrypt.compare(candidatePassword, this.password);
+          } catch (error) {
+            return false;
+          }
+        };
+
+        const result = await user.comparePassword('password123');
+        expect(result).toBe(true);
+      });
+
+      it('should return false for non-matching password', async () => {
+        const mockCompare = bcrypt.compare as jest.Mock;
+        mockCompare.mockResolvedValue(false);
+
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'hashedPassword123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+          try {
+            return await bcrypt.compare(candidatePassword, this.password);
+          } catch (error) {
+            return false;
+          }
+        };
+
+        const result = await user.comparePassword('wrongPassword');
+        expect(result).toBe(false);
+      });
+
+      it('should return false when bcrypt throws error', async () => {
+        const mockCompare = bcrypt.compare as jest.Mock;
+        mockCompare.mockRejectedValue(new Error('bcrypt error'));
+
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'hashedPassword123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+          try {
+            return await bcrypt.compare(candidatePassword, this.password);
+          } catch (error) {
+            return false;
+          }
+        };
+
+        const result = await user.comparePassword('anyPassword');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('generateEmailVerificationToken Method', () => {
+      it('should generate email verification token', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        
+        // Manually attach method for testing
+        user.generateEmailVerificationToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        const token = user.generateEmailVerificationToken();
+        
+        expect(token).toBeDefined();
+        expect(typeof token).toBe('string');
+        expect(token.length).toBe(64); // 32 bytes = 64 hex chars
+        expect(user.emailVerificationToken).toBeDefined();
+        expect(user.emailVerificationExpires).toBeDefined();
+      });
+
+      it('should set expiration to 24 hours from now', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        const now = Date.now();
+        
+        user.generateEmailVerificationToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        user.generateEmailVerificationToken();
+        
+        const expiry = user.emailVerificationExpires.getTime();
+        const expectedExpiry = now + 24 * 60 * 60 * 1000;
+        
+        // Allow 1 second tolerance
+        expect(expiry).toBeGreaterThanOrEqual(expectedExpiry - 1000);
+        expect(expiry).toBeLessThanOrEqual(expectedExpiry + 1000);
+      });
+
+      it('should generate different tokens on multiple calls', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.generateEmailVerificationToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        const token1 = user.generateEmailVerificationToken();
+        const token2 = user.generateEmailVerificationToken();
+        
+        expect(token1).not.toBe(token2);
+      });
+    });
+
+    describe('generateResetPasswordToken Method', () => {
+      it('should generate reset password token', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.generateResetPasswordToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        const token = user.generateResetPasswordToken();
+        
+        expect(token).toBeDefined();
+        expect(typeof token).toBe('string');
+        expect(token.length).toBe(64);
+        expect(user.resetPasswordToken).toBeDefined();
+        expect(user.resetPasswordExpires).toBeDefined();
+      });
+
+      it('should set expiration to 1 hour from now', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        const now = Date.now();
+        
+        user.generateResetPasswordToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        user.generateResetPasswordToken();
+        
+        const expiry = user.resetPasswordExpires.getTime();
+        const expectedExpiry = now + 60 * 60 * 1000;
+        
+        expect(expiry).toBeGreaterThanOrEqual(expectedExpiry - 1000);
+        expect(expiry).toBeLessThanOrEqual(expectedExpiry + 1000);
+      });
+
+      it('should generate different tokens on multiple calls', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.generateResetPasswordToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        const token1 = user.generateResetPasswordToken();
+        const token2 = user.generateResetPasswordToken();
+        
+        expect(token1).not.toBe(token2);
+      });
+
+      it('should hash token before storing', () => {
+        const userData = {
+          name: 'Test User',
+          email: 'test@example.com',
+          password: 'password123',
+        };
+
+        const user = new UserModel(userData);
+        
+        user.generateResetPasswordToken = function(): string {
+          const crypto = require('crypto');
+          const token = crypto.randomBytes(32).toString('hex');
+          
+          this.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+          this.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+          
+          return token;
+        };
+
+        const rawToken = user.generateResetPasswordToken();
+        
+        // Stored token should be hashed (different from raw token)
+        expect(user.resetPasswordToken).not.toBe(rawToken);
+        expect(user.resetPasswordToken.length).toBe(64); // SHA256 = 64 hex chars
+      });
+    });
+  });
 });

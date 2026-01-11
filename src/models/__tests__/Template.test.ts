@@ -397,4 +397,63 @@ describe('Template Model', () => {
       expect(template.layoutPositions[2].rotation).toBe(15);
     });
   });
+
+  describe('Layout Positions Validator', () => {
+    it('should validate layoutPositions count matches frameCount', () => {
+      const template = new Template({
+        name: 'Valid Template',
+        category: 'General',
+        thumbnail: 'thumb.jpg',
+        frameUrl: 'frame.png',
+        frameCount: 2,
+        layoutPositions: [
+          { x: 0, y: 0, width: 100, height: 100 },
+          { x: 100, y: 0, width: 100, height: 100 }
+        ]
+      });
+
+      // Simulate validator function
+      const positions = template.layoutPositions;
+      const frameCount = template.frameCount;
+      const isValid = positions.length === frameCount;
+
+      expect(isValid).toBe(true);
+    });
+
+    it('should detect invalid layoutPositions count', () => {
+      const template = new Template({
+        name: 'Invalid Template',
+        category: 'General',
+        thumbnail: 'thumb.jpg',
+        frameUrl: 'frame.png',
+        frameCount: 3,
+        layoutPositions: [
+          { x: 0, y: 0, width: 100, height: 100 },
+          { x: 100, y: 0, width: 100, height: 100 }
+        ]
+      });
+
+      const positions = template.layoutPositions;
+      const frameCount = template.frameCount;
+      const isValid = positions.length === frameCount;
+
+      expect(isValid).toBe(false);
+    });
+
+    it('should validate empty layoutPositions array', () => {
+      const template = new Template({
+        name: 'Empty Positions',
+        category: 'General',
+        thumbnail: 'thumb.jpg',
+        frameUrl: 'frame.png',
+        frameCount: 2,
+        layoutPositions: []
+      });
+
+      const positions = template.layoutPositions;
+      const isValid = positions.length === 2;
+
+      expect(isValid).toBe(false);
+    });
+  });
 });

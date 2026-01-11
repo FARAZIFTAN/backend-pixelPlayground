@@ -30,6 +30,7 @@ const config = {
     '!src/scripts/**', // Scripts tidak perlu coverage
     '!src/types/**', // Type definitions
     '!src/middleware.ts', // Next.js middleware
+    '!src/lib/testUtils.ts', // Test utility functions
   ],
   
   // Coverage thresholds (optional, dapat disesuaikan)

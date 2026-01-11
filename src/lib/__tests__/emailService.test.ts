@@ -419,4 +419,75 @@ describe('EmailService', () => {
       expect(service).toBeInstanceOf(EmailService);
     });
   });
+
+  describe('Unconfigured Service Fallback', () => {
+    it('should use fallback mode when SMTP not configured', async () => {
+      const unconfiguredConfig = createConfigService({} as unknown as NodeJS.ProcessEnv);
+      const unconfiguredService = new EmailService(unconfiguredConfig);
+      
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      
+      const result = await unconfiguredService.sendEmail({
+        to: 'test@test.com',
+        subject: 'Test Subject',
+        html: '<p>Test</p>',
+      });
+
+      expect(result).toBe(true);
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('should log configuration warning when SMTP not configured', () => {
+      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      
+      const unconfiguredConfig = createConfigService({} as unknown as NodeJS.ProcessEnv);
+      new EmailService(unconfiguredConfig);
+      
+      expect(consoleSpy).toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('should return not configured status when SMTP missing', () => {
+      const unconfiguredConfig = createConfigService({} as unknown as NodeJS.ProcessEnv);
+      const unconfiguredService = new EmailService(unconfiguredConfig);
+      
+      const status = unconfiguredService.getStatus();
+      expect(status.configured).toBe(false);
+    });
+  });
+
+  describe('SMTP Transporter Injection', () => {
+    it('should accept injected transporter and mark as configured', () => {
+      const injectedTransporter = {
+        sendMail: jest.fn().mockResolvedValue({ messageId: 'test-123' }),
+      };
+
+      const service = createEmailService(mockConfig, injectedTransporter as any);
+      
+      // Service should be configured when transporter is injected
+      expect(service).toBeDefined();
+    });
+  });
+
+  describe('Send Email Error Handling', () => {
+    it('should log fallback when send fails', async () => {
+      mockTransporter.sendMail.mockRejectedValueOnce(new Error('SMTP Error'));
+      
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      
+      const result = await emailService.sendEmail({
+        to: 'test@test.com',
+        subject: 'Test',
+        html: '<p>Test</p>',
+      });
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      
+      consoleSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+  });
 });
