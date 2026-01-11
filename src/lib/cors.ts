@@ -9,8 +9,9 @@ export function getAllowedOrigins(): string[] {
   }
   
   // Default allowed origins for development
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
   return [
-    'http://localhost:8080',  // Vite dev server
+    FRONTEND_URL,
     'http://localhost:5173',  // Vite alternative port
     'http://localhost:3000',  // Next.js dev
     'http://localhost:5174',  // Vite alternative port 2
@@ -22,11 +23,12 @@ export function getAllowedOrigins(): string[] {
  */
 export function getCorsHeaders(origin?: string | null): Record<string, string> {
   const allowedOrigins = getAllowedOrigins();
-  const requestOrigin = origin || allowedOrigins[0];
-  
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
+  const requestOrigin = origin || FRONTEND_URL;
+
   // Check if origin is allowed
   const isAllowed = allowedOrigins.includes(requestOrigin) || allowedOrigins.includes('*');
-  const allowOrigin = isAllowed ? requestOrigin : allowedOrigins[0];
+  const allowOrigin = isAllowed ? requestOrigin : FRONTEND_URL;
   
   return {
     'Access-Control-Allow-Credentials': 'true',
