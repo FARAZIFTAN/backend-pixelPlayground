@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// List of allowed origins
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
+// List of allowed origins - prefer environment variable, fallback to frontend URL
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
+const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : [
-      'http://localhost:8080',
-      'http://localhost:5173', 
+      FRONTEND_URL,
+      'http://localhost:5173',
       'http://localhost:3000',
       'http://localhost:5174',
     ];
