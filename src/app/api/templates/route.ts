@@ -87,45 +87,25 @@ export async function GET(request: NextRequest) {
     const [templates, total] = await Promise.all([
       (Template as any)
         .find(finalQuery)
-        .select('-frameUrl -aiFrameSpec') // Exclude large base64 frameUrl and aiFrameSpec from list
-        .populate({
-          path: 'createdBy',
-          select: 'name email', // Only select name and email, nothing else
-          strictPopulate: false, // Don't fail if ref is invalid
-          options: { lean: true } // Lean populate for better performance
-        })
+        .select('name category thumbnail isPremium frameCount isActive createdBy visibility createdAt updatedAt tags description') // Only select essential fields for list
+        .lean({ virtuals: false, getters: false }) // Optimize lean for faster queries
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .lean({ virtuals: false, getters: false }) // Optimize lean for faster queries
-        .maxTimeMS(25000) // 25 second query timeout
+        .maxTimeMS(10000) // Reduced to 10 seconds
         .exec(),
       
       // Count in parallel
-      (Template as any).countDocuments(finalQuery).maxTimeMS(5000)
+      (Template as any).countDocuments(finalQuery).maxTimeMS(3000)
     ]);
 
     console.timeEnd('⏱️ Template query execution');
 
-    // Transform templates to include creatorName from populated user
+    // Transform templates - simplified without populate
     const transformedTemplates = templates.map((template: any) => {
-      let creatorName = 'Anonymous';
-      
-      // Check if createdBy is populated (object with name/email)
-      if (template.createdBy && typeof template.createdBy === 'object') {
-        creatorName = template.createdBy.name || 
-                     template.createdBy.email?.split('@')[0] || 
-                     'Community Creator';
-      }
-      // If createdBy is still a string (user ID only), use default
-      else if (template.createdBy && typeof template.createdBy === 'string') {
-        creatorName = 'Community Creator';
-      }
-
       return {
         ...template,
-        creatorName,
-        createdBy: template.createdBy?._id || template.createdBy, // Keep the ID
+        creatorName: template.createdBy ? 'Community Creator' : 'Anonymous',
       };
     });
 
