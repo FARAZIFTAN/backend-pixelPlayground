@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 
-// HAPUS process.env, KITA HARDCODE LANGSUNG AGAR TIDAK ADA ALASAN LAGI
-const FRONTEND_URL = 'https://karyaklik.netlify.app'; 
+// Support untuk local dan production environment
+// Local: akan baca dari .env.local (http://localhost:8080)
+// Production: fallback ke production URL
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://karyaklik.netlify.app';
 
 const nextConfig = {
   async headers() {

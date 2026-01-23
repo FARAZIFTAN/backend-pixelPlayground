@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Get userId from token (if authenticated)
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
     let userId: string | null = null;
-    
+
     if (token) {
       try {
         const { verifyToken } = await import('@/lib/jwt');
@@ -35,17 +35,17 @@ export async function GET(request: NextRequest) {
 
     // Build query with $and to properly combine all conditions
     const query: any = { $and: [] };
-    
+
     // Filter by category
     if (category && category !== 'All') {
       query.$and.push({ category });
     }
-    
+
     // Filter by premium status
     if (isPremium !== null && isPremium !== undefined) {
       query.$and.push({ isPremium: isPremium === 'true' });
     }
-    
+
     // Filter by active status
     if (isActive !== null && isActive !== undefined) {
       query.$and.push({ isActive: isActive === 'true' });
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Simplify query if $and array is empty or has only one element
-    const finalQuery = query.$and.length === 0 ? {} : 
-                      query.$and.length === 1 ? query.$and[0] : query;
+    const finalQuery = query.$and.length === 0 ? {} :
+      query.$and.length === 1 ? query.$and[0] : query;
 
     console.time('⏱️ Template query execution');
 
@@ -87,14 +87,14 @@ export async function GET(request: NextRequest) {
     const [templates, total] = await Promise.all([
       (Template as any)
         .find(finalQuery)
-        .select('name category thumbnail isPremium frameCount isActive createdBy visibility createdAt updatedAt tags description') // Only select essential fields for list
+        .select('name category thumbnail frameUrl isPremium frameCount isActive createdBy visibility createdAt updatedAt tags description layoutPositions') // Added frameUrl and layoutPositions for Booth
         .lean({ virtuals: false, getters: false }) // Optimize lean for faster queries
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .maxTimeMS(10000) // Reduced to 10 seconds
         .exec(),
-      
+
       // Count in parallel
       (Template as any).countDocuments(finalQuery).maxTimeMS(3000)
     ]);
